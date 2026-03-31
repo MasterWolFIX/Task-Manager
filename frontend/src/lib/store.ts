@@ -21,7 +21,10 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       login: (token, user) => set({ token, user }),
-      logout: () => set({ token: null, user: null }),
+      logout: () => {
+          fetch('http://localhost:4000/api/auth/logout', { method: 'POST', credentials: 'include' });
+          set({ token: null, user: null });
+      },
     }),
     {
       name: 'auth-storage', // klucz pod którym stan zostanie zapisany w localStorage
