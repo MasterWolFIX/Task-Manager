@@ -9,6 +9,12 @@ import { javascript } from '@codemirror/lang-javascript';
 import { python } from '@codemirror/lang-python';
 import { cpp } from '@codemirror/lang-cpp';
 import { php } from '@codemirror/lang-php';
+import { java } from '@codemirror/lang-java';
+import { rust } from '@codemirror/lang-rust';
+import { go } from '@codemirror/lang-go';
+import { sql } from '@codemirror/lang-sql';
+import { html } from '@codemirror/lang-html';
+import { css } from '@codemirror/lang-css';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { useDropzone } from 'react-dropzone';
 import { apiFetch } from '@/lib/api';
@@ -101,12 +107,18 @@ export default function StudentDetails() {
   });
 
   const getLangExtension = (lang: string) => {
-      switch(lang?.toLowerCase() || 'javascript') {
-          case 'python': return python();
-          case 'c++': return cpp();
-          case 'php': return php();
-          case 'javascript': default: return javascript({ jsx: true });
-      }
+      const l = lang?.toLowerCase() || '';
+      if (l.includes('javascript') || l.includes('typescript')) return javascript({ jsx: true, typescript: true });
+      if (l.includes('python')) return python();
+      if (l.includes('java')) return java();
+      if (l.includes('c++') || l.includes('cpp')) return cpp();
+      if (l.includes('php')) return php();
+      if (l.includes('rust')) return rust();
+      if (l.includes('go')) return go();
+      if (l.includes('sql')) return sql();
+      if (l.includes('html')) return html();
+      if (l.includes('css')) return css();
+      return javascript();
   };
 
   if (!task) return <div className="min-h-screen text-muted flex justify-center items-center bg-black">Autoryzacja dostępu do arkusza...</div>;
@@ -160,7 +172,7 @@ export default function StudentDetails() {
                     <div className="w-2.5 h-2.5 rounded-full bg-zinc-800"></div>
                     <div className="w-2.5 h-2.5 rounded-full bg-zinc-800"></div>
                 </div>
-                <span className="ml-4 text-[10px] font-black text-zinc-600 uppercase tracking-widest flex-1">main.{task.language === 'python' ? 'py' : task.language === 'javascript' ? 'js' : task.language === 'php' ? 'php' : 'cpp'} — EDITOR SDK v2</span>
+                <span className="ml-4 text-[10px] font-black text-zinc-600 uppercase tracking-widest flex-1">PROJEKT: {task.language.toUpperCase()} — EDITOR SDK v2</span>
                 
                 <div className="flex items-center gap-6">
                     <span className="text-[9px] text-emerald-500/50 font-black uppercase tracking-widest flex items-center gap-2">

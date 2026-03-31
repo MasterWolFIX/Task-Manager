@@ -119,11 +119,16 @@ export default function NewTask() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-3">Język docelowy</label>
-                                <select value={language} onChange={e => setLanguage(e.target.value)} className="input-field appearance-none cursor-pointer font-semibold text-blue-400 !bg-black/50">
-                                    <option value="javascript">JavaScript (Node.js)</option>
-                                    <option value="python">Python 3.x</option>
+                                <select value={language} onChange={e => setLanguage(e.target.value)} className="input-field appearance-none cursor-pointer font-bold text-blue-400 !bg-black border-zinc-800 focus:border-blue-500/50 transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]">
+                                    <option value="javascript">JavaScript / TypeScript</option>
+                                    <option value="python">Python 3</option>
+                                    <option value="java">Java 17+</option>
+                                    <option value="c++">C++ (GCC/Clang)</option>
                                     <option value="php">PHP 8.2</option>
-                                    <option value="c++">C++ (GCC)</option>
+                                    <option value="rust">Rust</option>
+                                    <option value="go">Go (Golang)</option>
+                                    <option value="sql">SQL / Database</option>
+                                    <option value="html">HTML5 / CSS3</option>
                                 </select>
                             </div>
                             <div>
