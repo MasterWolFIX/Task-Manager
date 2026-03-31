@@ -77,6 +77,7 @@ export const tasks = pgTable('tasks', {
   description: text('description').notNull(),
   language: varchar('language', { length: 50 }),
   deadline: timestamp('deadline').notNull(),
+  submissionType: varchar('submission_type', { length: 20 }).notNull().default('both'), // 'code' | 'zip' | 'both'
   createdBy: integer('created_by').references(() => users.id),
   starterFilePath: varchar('starter_file_path', { length: 500 }),
   createdAt: timestamp('created_at').defaultNow(),

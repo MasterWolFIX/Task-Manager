@@ -23,26 +23,37 @@ export default function StudentDetails() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
-  const { token, user } = useAuthStore();
+  const { token, user, _hasHydrated } = useAuthStore();
   const [task, setTask] = useState<any>(null);
-  
-  const [code, setCode] = useState('// Powodzenia ze zleceniem!\n// Twój kod zacznij pisać poniżej...\n\n');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [code, setCode] = useState('// Powodzenia ze zleceniem!\n// Twój kod zacznij pisać poniżej...\n\n');
   const [uploadProgress, setUploadProgress] = useState('');
+  const [stagedFile, setStagedFile] = useState<File | null>(null);
+
+  const fetchTask = async () => {
+    try {
+        const res = await apiFetch(`/tasks/${id}`);
+        const data = await res.json();
+        setTask(data);
+        
+        // Szukamy ostatniej submisji (może być kod lub zip)
+        const mySub = data.submissions?.[0];
+        const savedDraft = localStorage.getItem(`draft_task_${data.id}`);
+        
+        if (savedDraft) {
+            setCode(savedDraft);
+        } else if (mySub && mySub.type === 'code') {
+            setCode(mySub.codeContent);
+        }
+        setIsLoaded(true);
+    } catch(err) { console.error(err); }
+  };
 
   useEffect(() => {
+    if (!_hasHydrated) return;
     if (!token || user?.role !== 'student') return router.push('/login');
-    
-    apiFetch(`/tasks/${id}`)
-      .then(res => res.json())
-      .then(data => {
-          setTask(data);
-          const savedDraft = localStorage.getItem(`draft_task_${data.id}`);
-          if (savedDraft) setCode(savedDraft);
-          setIsLoaded(true);
-      })
-      .catch(console.error);
-  }, [id, token, user, router]);
+    fetchTask();
+  }, [id, token, user, router, _hasHydrated]);
 
   useEffect(() => {
       if (isLoaded && task?.id && code) {
@@ -51,7 +62,7 @@ export default function StudentDetails() {
   }, [code, isLoaded, task]);
 
   const submitSolution = async () => {
-    if (!confirm('Czy na pewno chcesz przesłać aktualny kod i zakończyć zadanie?')) return;
+    if (!confirm('Czy na pewno chcesz przesłać aktualny kod? Nadpisze to Twoje poprzednie zgłoszenie.')) return;
     try {
       const res = await apiFetch('/submissions/code', {
         method: 'POST',
@@ -59,26 +70,17 @@ export default function StudentDetails() {
       });
       if (res.ok) {
         localStorage.removeItem(`draft_task_${task.id}`);
-        alert('Rozwiązanie zostało wysłane pomyślnie!');
-        router.push('/student');
+        alert('Kod został wysłany pomyślnie!');
+        fetchTask();
       }
-    } catch(err) { alert('Błąd przy łączności z serwerem podczas publikacji pracy.'); }
+    } catch(err) { alert('Błąd przy łączności z serwerem.'); }
   };
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-      const file = acceptedFiles[0];
-      if (!file) return;
-      if (!file.name.endsWith('.zip')) {
-          alert('Proszę wrzucać wyłącznie pliki z rozszerzeniem .zip!');
-          return;
-      }
-      
-      if (!confirm(`Czy na pewno chcesz przesłać plik "${file.name}" jako swoje rozwiązanie? Akcja ta nadpisze ewentualny kod z edytora.`)) return;
-
+  const submitZipSolution = async () => {
+      if (!stagedFile) return;
       setUploadProgress('Wysyłanie paczki...');
-      
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', stagedFile);
       formData.append('taskId', String(task.id));
 
       try {
@@ -87,31 +89,39 @@ export default function StudentDetails() {
               body: formData
           });
           if (res.ok) {
-              setUploadProgress('Paczka wdrożona z sukcesem!');
-              setTimeout(() => {
-                 alert('Projekt przesłany bazując na archiwum ZIP!');
-                 router.push('/student');
-              }, 500);
+              setUploadProgress('Paczka wdrożona!');
+              setStagedFile(null);
+              alert('Projekt przesłany bazując na archiwum ZIP!');
+              fetchTask();
           } else {
-              setUploadProgress('Błąd przy wysyłaniu pliku.');
+              const data = await res.json();
+              setUploadProgress(`Błąd: ${data.error}`);
           }
       } catch (e) {
           setUploadProgress('Błąd sieci.');
       }
-  }, [task, token, router]);
+  };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
-      onDrop, 
-      accept: { 'application/zip': ['.zip'], 'application/x-zip-compressed': ['.zip'] },
-      maxFiles: 1
-  });
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      if (!file) return;
+      const ext = file.name.toLowerCase();
+      if (!ext.endsWith('.zip') && !ext.endsWith('.rar') && !ext.endsWith('.7z')) {
+          alert('System akceptuje wyłącznie pliki archiwalne .zip, .rar oraz .7z!');
+          return;
+      }
+      setStagedFile(file);
+      setUploadProgress('');
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, multiple: false });
 
   const getLangExtension = (lang: string) => {
       const l = lang?.toLowerCase() || '';
       if (l.includes('javascript') || l.includes('typescript')) return javascript({ jsx: true, typescript: true });
       if (l.includes('python')) return python();
       if (l.includes('java')) return java();
-      if (l.includes('c++') || l.includes('cpp')) return cpp();
+      if (l.includes('c++')) return cpp();
       if (l.includes('php')) return php();
       if (l.includes('rust')) return rust();
       if (l.includes('go')) return go();
@@ -121,85 +131,128 @@ export default function StudentDetails() {
       return javascript();
   };
 
-  if (!task) return <div className="min-h-screen text-muted flex justify-center items-center bg-black">Autoryzacja dostępu do arkusza...</div>;
+  if (!_hasHydrated) return null;
+  if (!task) return <div className="min-h-screen text-muted flex justify-center items-center bg-black">Autoryzacja...</div>;
+
+  const mySub = task.submissions?.[0];
+  const isDeadlinePassed = new Date(task.deadline) < new Date();
+  const subType = task.submissionType || 'both';
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#050505]">
-      <nav className="sticky top-0 z-50 glass-panel !rounded-none !border-l-0 !border-r-0 !border-t-0 px-8 py-4">
+    <div className="min-h-screen flex flex-col bg-[#050505] text-white">
+      <nav className="sticky top-0 z-50 px-8 py-4 bg-black/80 backdrop-blur-3xl border-b border-white/5">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center font-bold text-blue-400">S</div>
-                <h1 className="font-bold tracking-tight text-white uppercase text-xs tracking-[0.2em]">Arkusz Studencki</h1>
+                <Link href="/student" className="w-8 h-8 rounded-xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center font-bold text-blue-400 Transition-all hover:bg-blue-600/20">&larr;</Link>
+                <h1 className="font-black uppercase text-[10px] tracking-[0.3em] text-zinc-100">Task Explorer</h1>
             </div>
-            <div className="flex items-center gap-6 text-[10px] font-black uppercase text-zinc-500 tracking-widest">
-                <Link href="/student" className="hover:text-white transition-all">&larr; PANEL GŁÓWNY</Link>
+            <div className="flex items-center gap-4">
+                <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${isDeadlinePassed ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'}`}>
+                    {isDeadlinePassed ? 'ZAKOŃCZONE' : 'W TRAKCIE'}
+                </div>
             </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto p-8 lg:py-12 flex-1 w-full grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <main className="max-w-7xl mx-auto p-8 lg:py-16 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-16">
         
-        <div className="lg:col-span-1 space-y-8">
-            <header className="mb-0">
-                <h2 className="text-[10px] uppercase tracking-[0.3em] font-black text-zinc-600 mb-4 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span> Specyfikacja Wyzwania
-                </h2>
-                <h1 className="text-3xl font-bold text-white mb-3 tracking-tighter">{task.title}</h1>
-                <div className="flex gap-2 text-[10px] font-black tracking-widest uppercase">
-                    <span className="bg-blue-600 text-white px-3 py-1 rounded shadow-blue-500/20">{task.language}</span>
-                    <span className="bg-zinc-800 text-zinc-400 px-3 py-1 rounded">DO: {new Date(task.deadline).toLocaleDateString()}</span>
+        {/* LEWA KOLUMNA: DESCRIPTION & ZIP */}
+        <div className="lg:col-span-4 space-y-12">
+            <header>
+                <div className="bg-blue-600/10 text-blue-500 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] inline-block mb-6 border border-blue-600/20 font-mono">
+                    {task.language.toUpperCase()}
+                </div>
+                <h1 className="text-4xl font-black mb-4 tracking-tighter leading-none uppercase">{task.title}</h1>
+                <div className="flex flex-col gap-2">
+                    <p className="text-[10px] font-bold text-zinc-700 uppercase tracking-widest">{new Date(task.deadline).toLocaleString()}</p>
+                    {mySub && (
+                        <div className="flex items-center gap-2 text-[10px] font-black text-blue-500 uppercase tracking-widest">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(35,99,235,0.8)]"></span>
+                            WYSŁANO: {mySub.type.toUpperCase()} 
+                            {mySub.grade && <span className="ml-2 bg-emerald-500 text-black px-2 py-0.5 rounded-md font-black">OCENA: {mySub.grade}</span>}
+                        </div>
+                    )}
                 </div>
             </header>
 
-            <div className="glass-panel p-6 border-zinc-800 bg-black/40">
-                <p className="whitespace-pre-wrap text-zinc-400 text-sm leading-7 font-medium">{task.description}</p>
+            <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl p-8 shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.07] transition-all">
+                    <svg className="w-20 h-20" fill="currentColor" viewBox="0 0 24 24"><path d="M14,17H7V15H14V17M17,13H7V11H17V13M17,9H7V7H17V9M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3Z" /></svg>
+                </div>
+                <p className="whitespace-pre-wrap text-zinc-400 text-[14px] leading-relaxed font-medium relative z-10">{task.description}</p>
             </div>
             
-            <div {...getRootProps()} className={`glass-panel p-8 border-dashed border-2 flex flex-col items-center justify-center text-center transition-all cursor-pointer group ${isDragActive ? 'border-blue-500 bg-blue-500/10' : 'border-zinc-900 hover:border-zinc-700 hover:bg-white/[0.01]'}`}>
-                <input {...getInputProps()} />
-                <span className={`text-4xl mb-4 transition-all duration-300 ${isDragActive ? 'scale-125 text-blue-400 rotate-12' : 'grayscale opacity-30 group-hover:grayscale-0 group-hover:opacity-60'}`}>📦</span>
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400 mb-2">
-                    {uploadProgress || (isDragActive ? 'Puszczaj!' : 'PRZEŚLIJ ARCHIWUM .ZIP')}
-                </span>
-                <span className="text-[10px] text-zinc-600 font-medium italic">Wszystkie pliki projektu w jednej paczce</span>
-            </div>
+            {/* AREA ZIP (Tylko jeśli dozwolone) */}
+            {(subType === 'zip' || subType === 'both') && (
+                <div className="space-y-6">
+                    {!stagedFile ? (
+                        <div 
+                            {...getRootProps()} 
+                            className={`relative rounded-3xl p-10 border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center min-h-[160px] ${isDragActive ? 'border-blue-600 bg-blue-600/10' : 'border-zinc-800 bg-black/40 hover:border-zinc-600 hover:bg-white/[0.02]'} ${isDeadlinePassed && 'opacity-20 pointer-events-none'}`}
+                        >
+                            <input {...getInputProps()} />
+                            <div className="w-12 h-12 rounded-2xl bg-zinc-900 flex items-center justify-center mb-4 border border-white/5">
+                                <span className="text-2xl">📦</span>
+                            </div>
+                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-500">Prześlij ZIP / RAR / 7Z</p>
+                        </div>
+                    ) : (
+                        <div className="bg-blue-600/10 border border-blue-500/30 rounded-3xl p-8 flex flex-col items-center animate-in zoom-in-95 duration-300">
+                            <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center mb-4 shadow-[0_0_50px_rgba(37,99,235,0.3)]">
+                                <span className="text-3xl">🗳️</span>
+                            </div>
+                            <p className="text-white font-black text-[10px] mb-1 uppercase tracking-widest truncate max-w-full">{stagedFile.name}</p>
+                            <p className="text-blue-500 font-bold text-[9px] uppercase tracking-widest mb-8 opacity-60">{(stagedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                            <div className="flex gap-4 w-full">
+                                <button onClick={() => setStagedFile(null)} className="flex-1 bg-black text-zinc-600 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-white/5 hover:text-white transition-all">Anuluj</button>
+                                <button onClick={submitZipSolution} className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-xl shadow-blue-600/20 transition-all">Prześlij Paczkę</button>
+                            </div>
+                        </div>
+                    )}
+                    {uploadProgress && (
+                        <div className="bg-black/50 border border-white/5 p-4 rounded-2xl text-center">
+                            <p className="text-[9px] font-black text-blue-500 uppercase tracking-[0.3em] animate-pulse">{uploadProgress}</p>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
 
-        <div className="lg:col-span-2 flex flex-col border border-zinc-800 rounded-2xl overflow-hidden shadow-[0_30px_90px_rgba(0,0,0,0.8)] bg-[#1e1e1e]">
-            <div className="flex justify-between items-center bg-zinc-900/50 border-b border-white/5 px-6 py-4">
-                <div className="flex items-center gap-2 pr-6 border-r border-white/5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-zinc-800"></div>
-                    <div className="w-2.5 h-2.5 rounded-full bg-zinc-800"></div>
-                    <div className="w-2.5 h-2.5 rounded-full bg-zinc-800"></div>
-                </div>
-                <span className="ml-4 text-[10px] font-black text-zinc-600 uppercase tracking-widest flex-1">PROJEKT: {task.language.toUpperCase()} — EDITOR SDK v2</span>
-                
-                <div className="flex items-center gap-6">
-                    <span className="text-[9px] text-emerald-500/50 font-black uppercase tracking-widest flex items-center gap-2">
-                       <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span> CLOUD SYNC
-                    </span>
-                    <button onClick={submitSolution} className="btn-primary !py-2 px-6 !text-[10px] !font-black !rounded-lg bg-blue-600 hover:bg-blue-500 shadow-[0_0_20px_rgba(37,99,235,0.2)] uppercase tracking-widest border-none">
-                        PRZEŚLIJ KOD
-                    </button>
-                </div>
-            </div>
+        {/* PRAWA KOLUMNA: EDYTOR (Tylko jeśli dozwolone) */}
+        <div className="lg:col-span-8">
+            {(subType === 'code' || subType === 'both') ? (
+                <div className="flex flex-col bg-[#080808] border border-white/5 rounded-[40px] overflow-hidden shadow-[0_60px_120px_rgba(0,0,0,0.9)] h-[820px] relative">
+                    <div className="flex justify-between items-center bg-black/40 border-b border-white/5 px-10 py-8">
+                        <div>
+                            <span className="text-[9px] font-black text-zinc-800 uppercase tracking-[0.5em] block mb-1">Editor Console v2.0</span>
+                            <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{task.language} Workspace</h3>
+                        </div>
+                        <button 
+                            onClick={submitSolution} disabled={isDeadlinePassed}
+                            className={`h-14 px-12 rounded-2xl font-black uppercase text-[10px] tracking-[0.3em] shadow-2xl transition-all active:scale-95 ${isDeadlinePassed ? 'bg-zinc-900 text-zinc-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20'}`}
+                        >
+                            {mySub ? 'Aktualizuj Edycję' : 'Wydaj Rozwiązanie'}
+                        </button>
+                    </div>
 
-            <div className="flex-1 w-full h-[650px] overflow-hidden text-base">
-                <CodeMirror
-                    value={code}
-                    height="100%"
-                    theme={oneDark}
-                    extensions={[getLangExtension(task.language)]}
-                    onChange={(val) => setCode(val)}
-                    className="w-full h-full text-base"
-                    basicSetup={{
-                        lineNumbers: true,
-                        highlightActiveLine: true,
-                        bracketMatching: true,
-                        autocompletion: true,
-                    }}
-                />
-            </div>
+                    <div className={`flex-1 w-full overflow-hidden ${isDeadlinePassed && 'opacity-30 grayscale pointer-events-none'}`}>
+                        <CodeMirror
+                            value={code} height="100%" theme={oneDark}
+                            readOnly={isDeadlinePassed}
+                            extensions={[getLangExtension(task.language)]}
+                            onChange={(val) => !isDeadlinePassed && setCode(val)}
+                            className="w-full h-full text-[16px]"
+                            basicSetup={{ lineNumbers: true, highlightActiveLine: true, bracketMatching: true, autocompletion: true, foldGutter: true }}
+                        />
+                    </div>
+                </div>
+            ) : (
+                <div className="bg-[#0a0a0a] border border-white/5 rounded-[40px] h-full flex flex-col items-center justify-center p-20 text-center">
+                    <div className="w-24 h-24 rounded-3xl bg-zinc-900 flex items-center justify-center mb-8 border border-white/5 text-4xl shadow-2xl skew-x-3 opacity-20">📂</div>
+                    <h2 className="text-2xl font-black uppercase tracking-tighter mb-4">Kod źródłowy wymagany w paczce</h2>
+                    <p className="text-zinc-600 max-w-sm text-sm font-medium leading-relaxed uppercase text-[10px] tracking-widest">To zadanie nie wspiera edycji online. Wszystkie pliki muszą zostać spakowane do formatu .zip i przesłane przez panel boczny.</p>
+                </div>
+            )}
         </div>
       </main>
     </div>

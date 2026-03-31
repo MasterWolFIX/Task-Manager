@@ -35,7 +35,7 @@ router.get('/', authMiddleware, async (req: any, res) => {
 
 // [Admin] Stwórz zadanie
 router.post('/', authMiddleware, requireAdmin, async (req: any, res) => {
-  const { title, description, language, deadline, starterFilePath, assignedUserIds, assignedClassIds } = req.body;
+  const { title, description, language, deadline, starterFilePath, assignedUserIds, assignedClassIds, submissionType } = req.body;
 
   try {
     const [newTask] = await db.insert(tasks).values({
@@ -43,6 +43,7 @@ router.post('/', authMiddleware, requireAdmin, async (req: any, res) => {
       description,
       language,
       deadline: new Date(deadline),
+      submissionType: submissionType || 'both',
       starterFilePath,
       createdBy: req.user.id
     }).returning();
@@ -73,11 +74,11 @@ router.post('/', authMiddleware, requireAdmin, async (req: any, res) => {
 
 // [Admin] Edycja zadania
 router.put('/:id', authMiddleware, requireAdmin, async (req: any, res) => {
-    const { title, description, language, deadline, assignedUserIds } = req.body;
+    const { title, description, language, deadline, assignedUserIds, submissionType } = req.body;
     const taskId = Number(req.params.id);
     try {
         const [updated] = await db.update(tasks)
-            .set({ title, description, language, deadline: new Date(deadline), updatedAt: new Date() })
+            .set({ title, description, language, deadline: new Date(deadline), submissionType: submissionType || 'both', updatedAt: new Date() })
             .where(eq(tasks.id, taskId)).returning();
         
         if (!updated) return res.status(404).json({ message: 'Nie znaleziono' });
@@ -143,7 +144,9 @@ router.get('/:id', authMiddleware, async (req: any, res) => {
                     with: { classUsers: { with: { class: true } } }
                 } 
             } 
-        } : undefined,
+        } : {
+            where: (s, { eq }) => eq(s.userId, Number(req.user.id))
+        },
         assignments: { with: { user: { columns: { name: true, email: true } } } }
       }
     });
