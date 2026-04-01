@@ -27,10 +27,14 @@ export default function AdminTaskDetails() {
   const [task, setTask] = useState<any>(null);
   const [classes, setClasses] = useState<any[]>([]);
   const [activeSubmissionId, setActiveSubmissionId] = useState<number | null>(null);
-  const [filterClassId, setFilterClassId] = useState<string>('all');
+  const [filterClassId, setFilterClassId] = useState('all');
+  const [showReviewed, setShowReviewed] = useState(false);
+  const [activeFile, setActiveFile] = useState<string | null>(null);
   
-  const [gradeInput, setGradeInput] = useState<{ [key: number]: number }>({});
-  const [feedbackInput, setFeedbackInput] = useState<{ [key: number]: string }>({});
+  const [grade, setGrade] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [canEditAfterGrade, setCanEditAfterGrade] = useState(false);
+  const [isSubmittingGrade, setIsSubmittingGrade] = useState(false);
 
   const [archiveFileList, setArchiveFileList] = useState<string[]>([]);
   const [selectedFileInArchive, setSelectedFileInArchive] = useState<string | null>(null);
@@ -106,19 +110,62 @@ export default function AdminTaskDetails() {
     }
   }, [selectedFileInArchive, activeSubmissionId, task]);
 
-  const handleGrade = async (submissionId: number) => {
+  const handleSubmitGrade = async () => {
+    if (!activeSubmissionId) return;
+    setIsSubmittingGrade(true);
     try {
-      const res = await apiFetch(`/submissions/${submissionId}/grade`, {
+      await apiFetch(`/submissions/${activeSubmissionId}/grade`, {
         method: 'PUT',
-        body: JSON.stringify({ grade: gradeInput[submissionId], feedback: feedbackInput[submissionId] })
+        body: JSON.stringify({ grade: Number(grade), feedback, canEdit: canEditAfterGrade }),
       });
-      if (res.ok) {
-        setTask((prev: any) => ({
-          ...prev, submissions: prev.submissions.map((s: any) => s.id === submissionId ? { ...s, grade: gradeInput[submissionId], feedback: feedbackInput[submissionId] } : s)
-        }));
+      alert('Ocena wystawiona.');
+      if (task) {
+        const res = await apiFetch(`/tasks/${task.id}`);
+        setTask(await res.json());
       }
-    } catch(err) { console.error(err); }
+    } catch (err) { alert('Błąd przy ocenianiu.'); }
+    setIsSubmittingGrade(false);
   };
+
+  const handleReject = async () => {
+    if (!activeSubmissionId || !confirm('Czy na pewno odrzucić to zadanie? (Uczeń będzie mógł wysłać je ponownie)')) return;
+    try {
+      await apiFetch(`/submissions/${activeSubmissionId}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ feedback: feedback || 'Zadanie odrzucone przez administratora.' })
+      });
+      alert('Zadanie odrzucone.');
+      if (task) {
+        const res = await apiFetch(`/tasks/${task.id}`);
+        setTask(await res.json());
+      }
+    } catch (err) { alert('Błąd przy odrzucaniu.'); }
+  };
+
+  const handleDeleteSub = async (subId: number) => {
+    if (!confirm('Usunąć tę submisję na stałe z serwera?')) return;
+    try {
+        await apiFetch(`/submissions/${subId}`, { method: 'DELETE' });
+        if (task) {
+            const res = await apiFetch(`/tasks/${task.id}`);
+            const data = await res.json();
+            setTask(data);
+            if (activeSubmissionId === subId) {
+                setActiveSubmissionId(data.submissions?.[0]?.id || null);
+            }
+        }
+    } catch (err) { alert('Błąd przy usuwaniu.'); }
+  };
+
+  const activeSub = task?.submissions?.find((s: any) => s.id === activeSubmissionId);
+
+  useEffect(() => {
+     if (activeSub) {
+         setGrade(activeSub.grade?.toString() || '');
+         setFeedback(activeSub.feedback || '');
+         setCanEditAfterGrade(activeSub.canEdit ?? false);
+     }
+  }, [activeSub]);
 
   const handleLogout = () => { useAuthStore.getState().logout(); router.push('/login'); };
 
@@ -143,11 +190,18 @@ export default function AdminTaskDetails() {
   if (!task) return <div className="min-h-screen bg-black" />;
 
   const filteredSubmissions = task.submissions?.filter((s: any) => {
-      if (filterClassId === 'all') return true;
-      return s.user.classUsers?.some((cu: any) => cu.classId === Number(filterClassId));
-  });
+      // 1. Filtr klasowy
+      const classMatch = !filterClassId || filterClassId === 'all' || s.user?.classUsers?.some((cu: any) => cu.classId === Number(filterClassId));
+      if (!classMatch) return false;
 
-  const activeSub = task.submissions?.find((s: any) => s.id === activeSubmissionId);
+      // 2. Filtr "Reviewed" (odrzucone/ocenione)
+      if (!showReviewed) {
+          if (s.status === 'rejected' || s.status === 'graded') return false;
+      }
+      
+      return true;
+  }) || [];
+
 
   return (
     <div className="min-h-screen flex h-screen overflow-hidden bg-[#050505] text-[#e4e4e7] text-[9px]">
@@ -155,9 +209,17 @@ export default function AdminTaskDetails() {
       {/* 1. NARROWER SIDEBAR */}
       <aside className="w-64 border-r border-white/5 bg-[#0a0a0a] flex flex-col shrink-0 overflow-hidden">
           <div className="p-4 pb-2">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white shadow-lg text-sm italic uppercase italic">A</div>
-                <h1 className="text-[11px] font-black tracking-tighter uppercase leading-tight italic opacity-40">Review console</h1>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white shadow-lg text-sm italic uppercase">A</div>
+                    <h1 className="text-[11px] font-black tracking-tighter uppercase leading-tight italic opacity-40">Review console</h1>
+                </div>
+                <button 
+                    onClick={() => setShowReviewed(!showReviewed)}
+                    className={`text-[8px] font-black px-2 py-0.5 rounded transition-all uppercase tracking-tighter border ${showReviewed ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-zinc-500 hover:text-white'}`}
+                >
+                    {showReviewed ? '👁️ All Records' : '🎯 To Match'}
+                </button>
               </div>
           </div>
           <div className="h-px bg-white/5 mb-4"></div>
@@ -173,18 +235,36 @@ export default function AdminTaskDetails() {
           </div>
 
           <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar pb-10">
-              {filteredSubmissions?.map((sub: any) => (
-                  <div 
-                      key={sub.id} onClick={() => setActiveSubmissionId(sub.id)}
-                      className={`group flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${sub.id === activeSubmissionId ? 'bg-blue-600/10 border-blue-600/30 text-white' : 'bg-transparent border-transparent text-zinc-600 hover:text-white'}`}
-                  >
-                      <div className="flex flex-col">
-                        <span className="text-[9px] font-black uppercase tracking-widest truncate">{sub.user.name}</span>
-                        <span className="text-[7px] font-bold opacity-40 uppercase">{sub.type === 'zip' ? '📦 Archive' : '📄 Code'}</span>
-                      </div>
-                      {sub.grade && <span className="text-[8px] font-black bg-blue-600/10 text-blue-400 px-1.5 py-0.5 rounded border border-blue-600/10">{sub.grade}</span>}
-                  </div>
-              ))}
+              {filteredSubmissions && filteredSubmissions.length > 0 ? (
+                filteredSubmissions.map((sub: any) => (
+                    <div 
+                        key={sub.id} onClick={() => setActiveSubmissionId(sub.id)}
+                        className={`group flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${sub.id === activeSubmissionId ? 'bg-blue-600/10 border-blue-600/30 text-white shadow-[0_0_20px_rgba(37,99,235,0.1)]' : 'bg-transparent border-transparent text-zinc-600 hover:text-white'}`}
+                    >
+                        <div className="flex flex-col flex-1 truncate">
+                            <span className="text-[9px] font-black uppercase tracking-widest truncate">{sub.user?.name || 'Student ID: ' + sub.userId}</span>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[7px] font-bold opacity-40 uppercase tracking-tighter">{sub.type === 'zip' ? '📦 Archive' : '📄 Code'}</span>
+                                {sub.status === 'rejected' && <span className="text-[6px] font-black text-red-500 uppercase px-1 rounded bg-red-500/10 border border-red-500/10 italic">Rejected</span>}
+                                {sub.status === 'graded' && <span className="text-[6px] font-black text-emerald-500 uppercase px-1 rounded bg-emerald-500/10 border border-emerald-500/10 italic">Graded</span>}
+                                {(!sub.status || sub.status === 'pending') && <span className="text-[6px] font-black text-zinc-500 uppercase px-1 rounded bg-zinc-500/10 border border-zinc-500/10 italic animate-pulse">Pending</span>}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           {sub.grade && <span className="text-[8px] font-black bg-blue-600 text-white px-2 py-0.5 rounded border border-blue-600/10 shadow-lg">{sub.grade}</span>}
+                           <button 
+                             onClick={(e) => { e.stopPropagation(); handleDeleteSub(sub.id); }}
+                             className="opacity-0 group-hover:opacity-100 p-2 text-red-600/40 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                             title="USUŃ NA STAŁE"
+                           >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                           </button>
+                        </div>
+                    </div>
+                ))
+              ) : (
+                <div className="p-10 text-center text-[8px] font-black uppercase tracking-[0.3em] opacity-20 italic">No submissions detected</div>
+              )}
           </nav>
       </aside>
 
@@ -307,31 +387,57 @@ export default function AdminTaskDetails() {
 
           {/* 3. GRADING TERMINAL COMPACT */}
           {activeSub ? (
-              <div className="h-24 bg-[#0a0a0a] border-t border-white/5 p-4 flex items-center justify-between px-10 shadow-[0_-30px_90px_rgba(0,0,0,0.8)] z-50">
+              <div className="h-28 bg-[#0a0a0a] border-t border-white/5 p-4 flex items-center justify-between px-10 shadow-[0_-30px_90px_rgba(0,0,0,0.8)] z-50">
                   <div className="flex items-center gap-6 flex-1">
                       <div className="w-20">
-                          <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 mb-1 block text-center">SCORE</label>
+                          <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 mb-1 block text-center italic">SCORE</label>
                           <input 
                               type="number" min="1" max="6"
                               className="w-full bg-black border border-white/5 rounded-xl h-12 text-center text-blue-500 font-black text-2xl outline-none focus:border-blue-600/30 transition-all font-mono shadow-2xl"
-                              value={gradeInput[activeSub.id] || activeSub.grade || ''}
-                              onChange={(e) => setGradeInput({ ...gradeInput, [activeSub.id]: Number(e.target.value) })}
+                              value={grade}
+                              onChange={(e) => setGrade(e.target.value)}
                           />
                       </div>
                       <div className="flex-1">
-                          <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 mb-1 block ml-3">FEEDBACK NOTES</label>
+                          <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 mb-1 block ml-3 italic">FEEDBACK NOTES</label>
                           <input 
-                              className="w-full bg-black border border-white/5 rounded-xl h-12 px-6 text-[10px] text-zinc-400 outline-none focus:border-blue-600/20 transition-all"
-                              placeholder="Technical review comments..."
-                              value={feedbackInput[activeSub.id] || activeSub.feedback || ''}
-                              onChange={(e) => setFeedbackInput({ ...feedbackInput, [activeSub.id]: e.target.value })}
+                              className="w-full bg-black border border-white/5 rounded-xl h-12 px-6 text-[10px] text-zinc-400 outline-none focus:border-blue-600/20 transition-all font-bold placeholder:italic"
+                              placeholder="Review comments..."
+                              value={feedback}
+                              onChange={(e) => setFeedback(e.target.value)}
                           />
                       </div>
-                      <button onClick={() => handleGrade(activeSub.id)} className="bg-white hover:bg-zinc-200 text-black px-10 h-12 rounded-xl font-black uppercase text-[10px] tracking-[0.3em] transition-all shadow-2xl active:scale-95">OCEŃ</button>
+                      <div className="flex flex-col items-center gap-2 px-4 border-r border-white/5 mr-4 h-12 justify-center">
+                          <label className="text-[7px] font-black uppercase tracking-widest text-zinc-700 italic">LOCK EDIT</label>
+                          <button 
+                            onClick={() => setCanEditAfterGrade(!canEditAfterGrade)}
+                            className={`w-10 h-5 rounded-full relative transition-all ${!canEditAfterGrade ? 'bg-zinc-800' : 'bg-red-600/40 border border-red-500/30'}`}
+                          >
+                            <div className={`absolute top-1 w-3 h-3 rounded-full transition-all ${!canEditAfterGrade ? 'left-1 bg-zinc-600' : 'left-6 bg-red-500 shadow-lg shadow-red-500/40'}`}></div>
+                          </button>
+                      </div>
+                      <div className="flex gap-2 h-12">
+                          <button 
+                            onClick={handleReject}
+                            className="text-red-500 hover:bg-red-500 hover:text-white px-6 rounded-xl font-black uppercase text-[9px] tracking-[0.3em] transition-all border border-red-500/20 shadow-xl shadow-red-900/5 active:scale-95"
+                          >
+                            ODRZUĆ
+                          </button>
+                          <button 
+                            disabled={isSubmittingGrade}
+                            onClick={handleSubmitGrade} 
+                            className="bg-white hover:bg-zinc-200 text-black px-10 rounded-xl font-black uppercase text-[10px] tracking-[0.4em] transition-all shadow-2xl shadow-white/5 active:scale-95 flex items-center justify-center min-w-[140px]"
+                          >
+                            {isSubmittingGrade ? '...' : 'ZAPISZ OCENĘ'}
+                          </button>
+                      </div>
                   </div>
               </div>
           ) : (
-              <div className="h-24 bg-[#0a0a0a] border-t border-white/5 flex items-center justify-center text-zinc-900 font-black uppercase text-[8px] tracking-[0.5em] opacity-40">Select submission to initialize.</div>
+              <div className="h-28 bg-[#0a0a0a] border-t border-white/5 flex flex-col items-center justify-center text-zinc-900 font-black uppercase text-[8px] tracking-[0.5em] opacity-40">
+                  <div className="animate-pulse mb-1">TERMINAL STANDBY</div>
+                  <div className="text-[6px]">Select submission to initialize protocol</div>
+              </div>
           )}
       </section>
     </div>

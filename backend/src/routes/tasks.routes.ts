@@ -16,7 +16,7 @@ router.get('/', authMiddleware, async (req: any, res) => {
         orderBy: [desc(tasks.createdAt)],
         with: {
             author: { columns: { name: true, email: true } },
-            submissions: { columns: { id: true, type: true } }
+            submissions: { columns: { id: true, type: true, status: true } }
         }
       });
       return res.json(allTasks);
@@ -116,18 +116,19 @@ router.delete('/:id', authMiddleware, requireAdmin, async (req: any, res) => {
 // [Admin] Pobierz ogólne statystyki systemu
 router.get('/stats/dashboard', authMiddleware, requireAdmin, async (req: any, res) => {
   try {
-    const totalUsers = await db.query.users.findMany({ columns: { id: true } });
-    const totalTasks = await db.query.tasks.findMany({ columns: { id: true } });
-    const totalSubs = await db.query.submissions.findMany({ 
-      where: (s, { isNull }) => isNull(s.grade) // Wszystkie nieocenione
+    const allUsers = await db.query.users.findMany({ columns: { id: true } });
+    const allTasks = await db.query.tasks.findMany({ columns: { id: true } });
+    const ungraded = await db.query.submissions.findMany({
+      where: (s, { isNull }) => isNull(s.grade) 
     });
 
     res.json({
-      activeStudents: totalUsers.length,
-      tasksCount: totalTasks.length,
-      ungradedSubmissions: totalSubs.length
+      activeStudents: allUsers.length,
+      tasksCount: allTasks.length,
+      ungradedSubmissions: ungraded.length
     });
   } catch (err: any) {
+    console.error('[Dashboard Stats Error]', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -141,8 +142,7 @@ router.get('/:id', authMiddleware, async (req: any, res) => {
         submissions: req.user.role === 'admin' ? { 
             with: { 
                 user: { 
-                    columns: { name: true, email: true },
-                    with: { classUsers: { with: { class: true } } }
+                    columns: { name: true, email: true }
                 } 
             } 
         } : {
@@ -151,6 +151,10 @@ router.get('/:id', authMiddleware, async (req: any, res) => {
         assignments: { with: { user: { columns: { name: true, email: true } } } }
       }
     });
+
+    if (task && req.user.role === 'admin') {
+      console.log(`[Review Admin] Zadanie ID: ${task.id}, znaleziono submisji: ${task.submissions?.length || 0}`);
+    }
 
     if (!task) return res.status(404).json({ message: 'Zadanie nie istnieje' });
 

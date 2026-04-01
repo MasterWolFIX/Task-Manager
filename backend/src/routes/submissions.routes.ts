@@ -9,7 +9,7 @@ import { authMiddleware } from '../middleware/auth.middleware';
 import { requireAdmin } from '../middleware/role.middleware';
 import { io } from '../index';
 const sevenBin = require('7zip-bin');
-const sevenZipPath = sevenBin.path7za || sevenBin.path || sevenBin;
+const sevenZipPath = path.resolve(sevenBin.path7za || sevenBin.path || sevenBin);
 const { list, extractFull } = require('node-7z');
 
 const router = Router();
@@ -50,11 +50,14 @@ const saveSubmission = async (req: any, type: string, codeContent: string, langu
     });
     let submission;
     if (existing) {
-      if (existing.grade !== null && req.user.role !== 'admin') {
+      if (existing.canEdit === false && req.user.role !== 'admin') {
+          throw new Error('Zadanie zostało zablokowane do edycji przez administratora.');
+      }
+      if (existing.grade !== null && req.user.role !== 'admin' && existing.canEdit === false) {
           throw new Error('Zadanie zostało już ocenione i nie można go modyfikować.');
       }
       [submission] = await db.update(submissions).set({
-        type, codeContent, language, updatedAt: new Date(), grade: null, feedback: null, gradedAt: null
+        type, codeContent, language, updatedAt: new Date(), grade: null, feedback: null, gradedAt: null, status: 'pending'
       }).where(eq(submissions.id, existing.id)).returning();
     } else {
       [submission] = await db.insert(submissions).values({
@@ -189,10 +192,10 @@ router.get('/:id/file-content', authMiddleware, requireAdmin, async (req: any, r
 
 router.put('/:id/grade', authMiddleware, requireAdmin, async (req: any, res: any) => {
   const { id } = req.params;
-  const { grade, feedback } = req.body;
+  const { grade, feedback, canEdit } = req.body;
   try {
     const [sub] = await db.update(submissions).set({
-      grade, feedback, gradedAt: new Date()
+      grade, feedback, canEdit: canEdit ?? false, gradedAt: new Date(), status: 'graded'
     }).where(eq(submissions.id, Number(id))).returning();
     if (!sub) return res.status(404).json({ message: 'Nie znaleziono' });
     io.to(`user_${sub.userId}`).emit('newGrade', { submissionId: sub.id, grade });
@@ -200,6 +203,43 @@ router.put('/:id/grade', authMiddleware, requireAdmin, async (req: any, res: any
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
+});
+
+router.post('/:id/reject', authMiddleware, requireAdmin, async (req: any, res: any) => {
+  const { id } = req.params;
+  const { feedback } = req.body;
+  try {
+    const [sub] = await db.update(submissions).set({
+      status: 'rejected', grade: null, feedback, canEdit: true, gradedAt: null
+    }).where(eq(submissions.id, Number(id))).returning();
+    if (!sub) return res.status(404).json({ message: 'Nie znaleziono' });
+    io.to(`user_${sub.userId}`).emit('submissionRejected', { submissionId: sub.id, feedback });
+    res.status(200).json(sub);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// [Admin] Usuń submisję (i plik fizyczny)
+router.delete('/:id', authMiddleware, requireAdmin, async (req: any, res) => {
+    try {
+        const sub = await db.query.submissions.findFirst({
+            where: eq(submissions.id, Number(req.params.id))
+        });
+        if (!sub) return res.status(404).json({ message: 'Nie znaleziono' });
+
+        if (sub.type === 'zip' && sub.codeContent) {
+            const fs = require('fs');
+            const relativePath = sub.codeContent.replace('[ZIP_FILE] ', '').trim();
+            const fullPath = path.resolve(process.cwd(), relativePath);
+            if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+        }
+
+        await db.delete(submissions).where(eq(submissions.id, sub.id));
+        res.json({ success: true, message: 'Submisja usunięta.' });
+    } catch(err: any) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 export default router;

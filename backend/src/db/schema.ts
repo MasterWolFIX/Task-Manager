@@ -129,6 +129,8 @@ export const submissions = pgTable('submissions', {
   grade: smallint('grade'),
   feedback: text('feedback'),
   gradedAt: timestamp('graded_at'),
+  status: varchar('status', { length: 20 }).default('pending'), // 'pending' | 'graded' | 'rejected'
+  canEdit: boolean('canEdit').default(true),
 });
 
 export const submissionsRelations = relations(submissions, ({ one }) => ({

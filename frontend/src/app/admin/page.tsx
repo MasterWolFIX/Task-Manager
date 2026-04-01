@@ -114,12 +114,14 @@ export default function AdminDashboard() {
                                             <h3 className="text-[12px] font-bold text-white tracking-tight group-hover:text-blue-500 transition-colors uppercase leading-none">{task.title}</h3>
                                             <span className="text-[6px] font-black uppercase px-1.5 py-0.5 bg-zinc-900 text-zinc-700 rounded border border-white/5">{task.language}</span>
                                             {task.submissions && task.submissions.length > 0 && (
-                                              <div className="flex gap-1 items-center ml-2 border-l border-white/10 pl-2">
-                                                <span className="text-[6px] font-black uppercase text-blue-500">
-                                                  {task.submissions.filter((s:any) => s.type === 'zip').length} 📦
+                                              <div className="flex items-center gap-1.5 opacity-70">
+                                                <span className="text-[10px] grayscale brightness-125" title="Paczek do sprawdzenia">📦</span>
+                                                <span className="text-[10px] font-black">
+                                                    {task.submissions.filter((s:any) => s.type === 'zip' && (!s.status || s.status === 'pending')).length}
                                                 </span>
-                                                <span className="text-[6px] font-black uppercase text-zinc-500">
-                                                  {task.submissions.filter((s:any) => s.type === 'code').length} 📄
+                                                <span className="text-[10px] grayscale brightness-125 ml-1" title="Kodów do sprawdzenia">📄</span>
+                                                <span className="text-[10px] font-black">
+                                                    {task.submissions.filter((s:any) => s.type === 'code' && (!s.status || s.status === 'pending')).length}
                                                 </span>
                                               </div>
                                             )}

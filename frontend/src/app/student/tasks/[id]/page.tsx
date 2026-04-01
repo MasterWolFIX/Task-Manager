@@ -132,11 +132,12 @@ export default function StudentDetails() {
   };
 
   if (!_hasHydrated) return null;
-  if (!task) return <div className="min-h-screen text-muted flex justify-center items-center bg-black">Autoryzacja...</div>;
+  if (!task) return <div className="min-h-screen text-zinc-500 flex justify-center items-center bg-black font-black uppercase tracking-[0.5em] animate-pulse">Syncing Task...</div>;
 
   const mySub = task.submissions?.[0];
   const isDeadlinePassed = new Date(task.deadline) < new Date();
   const subType = task.submissionType || 'both';
+  const isLocked = mySub?.canEdit === false;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#050505] text-white">
@@ -144,9 +145,14 @@ export default function StudentDetails() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
                 <Link href="/student" className="w-8 h-8 rounded-xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center font-bold text-blue-400 Transition-all hover:bg-blue-600/20">&larr;</Link>
-                <h1 className="font-black uppercase text-[10px] tracking-[0.3em] text-zinc-100">Task Explorer</h1>
+                <h1 className="font-black uppercase text-[10px] tracking-[0.3em] text-zinc-100 italic">Task Explorer</h1>
             </div>
             <div className="flex items-center gap-4">
+                {isLocked && (
+                    <div className="px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-red-600/20 text-red-500 border border-red-500/20 animate-pulse">
+                        EDYCJA ZABLOKOWANA
+                    </div>
+                )}
                 <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${isDeadlinePassed ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'}`}>
                     {isDeadlinePassed ? 'ZAKOŃCZONE' : 'W TRAKCIE'}
                 </div>
@@ -164,12 +170,31 @@ export default function StudentDetails() {
                 </div>
                 <h1 className="text-4xl font-black mb-4 tracking-tighter leading-none uppercase">{task.title}</h1>
                 <div className="flex flex-col gap-2">
-                    <p className="text-[10px] font-bold text-zinc-700 uppercase tracking-widest">{new Date(task.deadline).toLocaleString()}</p>
+                    <p className="text-[10px] font-bold text-zinc-700 uppercase tracking-widest italic">{new Date(task.deadline).toLocaleString()}</p>
                     {mySub && (
-                        <div className="flex items-center gap-2 text-[10px] font-black text-blue-500 uppercase tracking-widest">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(35,99,235,0.8)]"></span>
-                            WYSŁANO: {mySub.type.toUpperCase()} 
-                            {mySub.grade && <span className="ml-2 bg-emerald-500 text-black px-2 py-0.5 rounded-md font-black">OCENA: {mySub.grade}</span>}
+                        <div className="flex flex-col gap-3 mt-4">
+                            <div className="flex items-center gap-2 text-[10px] font-black text-blue-500 uppercase tracking-widest">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(35,99,235,0.8)]"></span>
+                                WYSŁANO: {mySub.type.toUpperCase()} 
+                                {mySub.grade && <span className="ml-2 bg-blue-600 text-white px-2 py-0.5 rounded-md font-black">OCENA: {mySub.grade}</span>}
+                            </div>
+                            
+                            {mySub.status === 'rejected' && (
+                                <div className="bg-red-600/10 border border-red-500/20 p-5 rounded-2xl animate-in fade-in slide-in-from-top-4 duration-500">
+                                    <div className="text-red-500 font-black text-[9px] uppercase tracking-widest mb-2 flex items-center gap-2">
+                                        <span>⚠️</span> ZADANIE ODRZUCONE
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400 font-medium italic">"{mySub.feedback}"</p>
+                                    <div className="mt-3 text-[7px] text-red-500 opacity-60 font-black uppercase tracking-[0.2em]">Popraw błędy i wyślij ponownie</div>
+                                </div>
+                            )}
+
+                            {mySub.status === 'graded' && mySub.feedback && (
+                                <div className="bg-blue-600/10 border border-blue-600/10 p-5 rounded-2xl italic text-zinc-400 text-[11px] font-medium">
+                                    <span className="text-blue-500 font-bold uppercase text-[7px] tracking-widest block mb-1">Feedback od nauczyciela:</span>
+                                    "{mySub.feedback}"
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -188,24 +213,24 @@ export default function StudentDetails() {
                     {!stagedFile ? (
                         <div 
                             {...getRootProps()} 
-                            className={`relative rounded-3xl p-10 border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center min-h-[160px] ${isDragActive ? 'border-blue-600 bg-blue-600/10' : 'border-zinc-800 bg-black/40 hover:border-zinc-600 hover:bg-white/[0.02]'} ${isDeadlinePassed && 'opacity-20 pointer-events-none'}`}
+                            className={`relative rounded-3xl p-10 border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center min-h-[160px] ${(isDragActive || isLocked || isDeadlinePassed) ? (isLocked || isDeadlinePassed ? 'opacity-20 pointer-events-none' : 'border-blue-600 bg-blue-600/10') : 'border-zinc-800 bg-black/40 hover:border-zinc-600 hover:bg-white/[0.02]'}`}
                         >
                             <input {...getInputProps()} />
                             <div className="w-12 h-12 rounded-2xl bg-zinc-900 flex items-center justify-center mb-4 border border-white/5">
-                                <span className="text-2xl">📦</span>
+                                <span className="text-2xl">{isLocked ? '🔒' : '📦'}</span>
                             </div>
-                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-500">Prześlij ZIP / RAR / 7Z</p>
+                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-500">{isLocked ? 'Przesyłanie zablokowane' : 'Prześlij ZIP / RAR / 7Z'}</p>
                         </div>
                     ) : (
                         <div className="bg-blue-600/10 border border-blue-500/30 rounded-3xl p-8 flex flex-col items-center animate-in zoom-in-95 duration-300">
-                            <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center mb-4 shadow-[0_0_50px_rgba(37,99,235,0.3)]">
+                            <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center mb-4 shadow-[0_0_50_rgba(37,99,235,0.3)]">
                                 <span className="text-3xl">🗳️</span>
                             </div>
-                            <p className="text-white font-black text-[10px] mb-1 uppercase tracking-widest truncate max-w-full">{stagedFile.name}</p>
+                            <p className="text-white font-black text-[10px] mb-1 uppercase tracking-widest truncate max-w-full italic">{stagedFile.name}</p>
                             <p className="text-blue-500 font-bold text-[9px] uppercase tracking-widest mb-8 opacity-60">{(stagedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                             <div className="flex gap-4 w-full">
-                                <button onClick={() => setStagedFile(null)} className="flex-1 bg-black text-zinc-600 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-white/5 hover:text-white transition-all">Anuluj</button>
-                                <button onClick={submitZipSolution} className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-xl shadow-blue-600/20 transition-all">Prześlij Paczkę</button>
+                                <button onClick={() => setStagedFile(null)} className="flex-1 bg-black text-zinc-600 py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-white/5 hover:text-white transition-all font-black italic">Anuluj</button>
+                                <button onClick={submitZipSolution} className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-xl shadow-blue-600/20 transition-all font-black italic">Prześlij Paczkę</button>
                             </div>
                         </div>
                     )}
@@ -224,23 +249,23 @@ export default function StudentDetails() {
                 <div className="flex flex-col bg-[#080808] border border-white/5 rounded-[40px] overflow-hidden shadow-[0_60px_120px_rgba(0,0,0,0.9)] h-[820px] relative">
                     <div className="flex justify-between items-center bg-black/40 border-b border-white/5 px-10 py-8">
                         <div>
-                            <span className="text-[9px] font-black text-zinc-800 uppercase tracking-[0.5em] block mb-1">Editor Console v2.0</span>
-                            <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">{task.language} Workspace</h3>
+                            <span className="text-[9px] font-black text-zinc-800 uppercase tracking-[0.5em] block mb-1 opacity-20 italic">Editor Console v2.0</span>
+                            <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] italic">{task.language} Workspace</h3>
                         </div>
                         <button 
-                            onClick={submitSolution} disabled={isDeadlinePassed}
-                            className={`h-14 px-12 rounded-2xl font-black uppercase text-[10px] tracking-[0.3em] shadow-2xl transition-all active:scale-95 ${isDeadlinePassed ? 'bg-zinc-900 text-zinc-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20'}`}
+                            onClick={submitSolution} disabled={isDeadlinePassed || isLocked}
+                            className={`h-14 px-12 rounded-2xl font-black uppercase text-[10px] tracking-[0.3em] shadow-2xl transition-all active:scale-95 italic ${(isDeadlinePassed || isLocked) ? 'bg-zinc-900 text-zinc-700 cursor-not-allowed opacity-40' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20'}`}
                         >
-                            {mySub ? 'Aktualizuj Edycję' : 'Wydaj Rozwiązanie'}
+                            {isLocked ? 'ZABLOKOWANO' : (mySub ? 'Aktualizuj Edycję' : 'Wydaj Rozwiązanie')}
                         </button>
                     </div>
 
-                    <div className={`flex-1 w-full overflow-hidden ${isDeadlinePassed && 'opacity-30 grayscale pointer-events-none'}`}>
+                    <div className={`flex-1 w-full overflow-hidden ${(isDeadlinePassed || isLocked) && 'opacity-30 grayscale pointer-events-none'}`}>
                         <CodeMirror
                             value={code} height="100%" theme={oneDark}
-                            readOnly={isDeadlinePassed}
+                            readOnly={isDeadlinePassed || isLocked}
                             extensions={[getLangExtension(task.language)]}
-                            onChange={(val) => !isDeadlinePassed && setCode(val)}
+                            onChange={(val) => !(isDeadlinePassed || isLocked) && setCode(val)}
                             className="w-full h-full text-[16px]"
                             basicSetup={{ lineNumbers: true, highlightActiveLine: true, bracketMatching: true, autocompletion: true, foldGutter: true }}
                         />
