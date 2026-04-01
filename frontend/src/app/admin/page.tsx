@@ -113,6 +113,16 @@ export default function AdminDashboard() {
                                           <div className="flex items-center gap-2 mb-0.5">
                                             <h3 className="text-[12px] font-bold text-white tracking-tight group-hover:text-blue-500 transition-colors uppercase leading-none">{task.title}</h3>
                                             <span className="text-[6px] font-black uppercase px-1.5 py-0.5 bg-zinc-900 text-zinc-700 rounded border border-white/5">{task.language}</span>
+                                            {task.submissions && task.submissions.length > 0 && (
+                                              <div className="flex gap-1 items-center ml-2 border-l border-white/10 pl-2">
+                                                <span className="text-[6px] font-black uppercase text-blue-500">
+                                                  {task.submissions.filter((s:any) => s.type === 'zip').length} 📦
+                                                </span>
+                                                <span className="text-[6px] font-black uppercase text-zinc-500">
+                                                  {task.submissions.filter((s:any) => s.type === 'code').length} 📄
+                                                </span>
+                                              </div>
+                                            )}
                                           </div>
                                           <p className="text-[8px] font-medium text-zinc-800 uppercase tracking-widest italic">{new Date(task.deadline).toLocaleString()}</p>
                                       </div>

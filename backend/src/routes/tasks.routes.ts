@@ -15,7 +15,8 @@ router.get('/', authMiddleware, async (req: any, res) => {
       const allTasks = await db.query.tasks.findMany({
         orderBy: [desc(tasks.createdAt)],
         with: {
-            author: { columns: { name: true, email: true } }
+            author: { columns: { name: true, email: true } },
+            submissions: { columns: { id: true, type: true } }
         }
       });
       return res.json(allTasks);

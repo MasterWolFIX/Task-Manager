@@ -8,10 +8,9 @@ import { eq } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { requireAdmin } from '../middleware/role.middleware';
 import { io } from '../index';
-// @ts-ignore
-import sevenBin from '7zip-bin';
-// @ts-ignore
-import { list, extractFull } from 'node-7z';
+const sevenBin = require('7zip-bin');
+const sevenZipPath = sevenBin.path7za || sevenBin.path || sevenBin;
+const { list, extractFull } = require('node-7z');
 
 const router = Router();
 
@@ -93,8 +92,9 @@ router.post('/zip', authMiddleware, (req: any, res: any) => {
             const fullPath = req.file.path.replace(/\\/g, '/');
             const cwd = process.cwd().replace(/\\/g, '/');
             const relativePath = fullPath.replace(cwd, '').replace(/^\//, '');
+            const extension = path.extname(req.file.originalname).replace('.', '').toLowerCase();
             req.body.taskId = Number(taskId);
-            const submission = await saveSubmission(req, 'zip', `[ZIP_FILE] ${relativePath}`, 'zip');
+            const submission = await saveSubmission(req, 'zip', `[ZIP_FILE] ${relativePath}`, extension);
             res.status(200).json(submission);
         } catch (error: any) {
             res.status(400).json({ error: error.message });
@@ -108,23 +108,38 @@ router.get('/:id/explore', authMiddleware, requireAdmin, async (req: any, res: a
         const sub = await db.query.submissions.findFirst({ where: eq(submissions.id, Number(req.params.id)) });
         if (!sub || sub.type !== 'zip' || !sub.codeContent) return res.status(404).json({ error: 'Nie znaleziono archiwum' });
 
-        const filePath = path.join(process.cwd(), sub.codeContent.replace('[ZIP_FILE] ', ''));
-        if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Plik fizycznie nie istnieje' });
+        const relativePath = sub.codeContent.replace('[ZIP_FILE] ', '').trim();
+        const filePath = path.join(process.cwd(), relativePath);
+        
+        console.log(`[Archive Explorer] Attempting to list contents of: ${filePath}`);
 
-        const files: any[] = [];
-        const stream = list(filePath, { $bin: sevenBin.path });
+        if (!fs.existsSync(filePath)) {
+            console.error(`[Archive Explorer] File does not exist: ${filePath}`);
+            return res.status(404).json({ error: 'Plik fizycznie nie istnieje na serwerze' });
+        }
+
+        const files: string[] = [];
+        console.log(`[7z DEBUG] Using binary at: ${sevenZipPath}`);
+        const stream = list(filePath, { $bin: sevenZipPath });
 
         stream.on('data', (data: any) => {
-            if (data && data.file) files.push(data.file);
+            // Próbujemy wyciągnąć ścieżkę z różnych możliwych pól w zależności od wersji node-7z
+            const p = data.path || data.file || data.name || (typeof data === 'string' ? data : null);
+            
+            if (p) {
+                const isDir = data.method === 'Directory' || p.endsWith('/') || p.endsWith('\\') || data.attributes?.includes('D');
+                if (!isDir) files.push(p);
+            }
         });
 
         stream.on('end', () => {
+            console.log(`[Archive Explorer] Final file list:`, files);
             if (!res.headersSent) res.json({ files });
         });
 
         stream.on('error', (err: any) => {
-            console.error('7z Error:', err);
-            if (!res.headersSent) res.status(500).json({ error: err.message });
+            console.error('[Archive Explorer] 7z Error:', err.message);
+            if (!res.headersSent) res.status(500).json({ error: `Błąd 7z: ${err.message}` });
         });
     } catch (e: any) {
         if (!res.headersSent) res.status(500).json({ error: e.message });
@@ -144,7 +159,7 @@ router.get('/:id/file-content', authMiddleware, requireAdmin, async (req: any, r
         fs.mkdirSync(tmpDir, { recursive: true });
 
         const stream = extractFull(archivePath, tmpDir, { 
-            $bin: sevenBin.path,
+            $bin: sevenZipPath,
             $files: [fileInside as string]
         });
 

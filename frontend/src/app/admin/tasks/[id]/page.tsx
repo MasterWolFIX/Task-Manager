@@ -73,14 +73,20 @@ export default function AdminTaskDetails() {
         apiFetch(`/submissions/${sub.id}/explore`)
             .then(res => res.json())
             .then(data => {
-                if (data.files) {
+                if (data.error) {
+                    setArchiveFileList([]);
+                    alert(`Błąd archiwum: ${data.error}`);
+                } else if (data.files) {
                     const fileNames = data.files.map((f: any) => f.path || f);
                     setArchiveFileList(fileNames);
-                    const first = fileNames.find((f: string) => f.includes('main') || f.includes('index')) || fileNames[0];
+                    const first = fileNames.find((f: string) => f.toLowerCase().includes('main') || f.toLowerCase().includes('index')) || fileNames[0];
                     if (first) setSelectedFileInArchive(first);
                 }
             })
-            .catch(console.error)
+            .catch(err => {
+                console.error(err);
+                alert('Błąd połączenia przy eksploracji archiwum.');
+            })
             .finally(() => setIsLoadingArchive(false));
     }
   }, [activeSubmissionId, task]);
@@ -172,7 +178,10 @@ export default function AdminTaskDetails() {
                       key={sub.id} onClick={() => setActiveSubmissionId(sub.id)}
                       className={`group flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${sub.id === activeSubmissionId ? 'bg-blue-600/10 border-blue-600/30 text-white' : 'bg-transparent border-transparent text-zinc-600 hover:text-white'}`}
                   >
-                      <span className="text-[9px] font-black uppercase tracking-widest truncate">{sub.user.name}</span>
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-black uppercase tracking-widest truncate">{sub.user.name}</span>
+                        <span className="text-[7px] font-bold opacity-40 uppercase">{sub.type === 'zip' ? '📦 Archive' : '📄 Code'}</span>
+                      </div>
                       {sub.grade && <span className="text-[8px] font-black bg-blue-600/10 text-blue-400 px-1.5 py-0.5 rounded border border-blue-600/10">{sub.grade}</span>}
                   </div>
               ))}
@@ -195,18 +204,85 @@ export default function AdminTaskDetails() {
           <div className="flex-1 flex overflow-hidden">
               {activeSub?.type === 'zip' && (
                   <div className="w-56 border-r border-white/5 bg-[#080808] flex flex-col shrink-0 animate-in slide-in-from-left duration-500">
-                      <div className="p-4 pb-2 text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800">Archive FS</div>
-                      <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1 custom-scrollbar pb-10">
+                      <div className="p-4 pb-2 text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 flex justify-between items-center">
+                        <span>Archive FS</span>
+                        <span className="text-[6px] bg-blue-600/20 px-1 rounded text-blue-400">7Z/ZIP/RAR</span>
+                      </div>
+                      <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5 custom-scrollbar pb-10">
                           {isLoadingArchive ? (
-                              <div className="p-10 text-center text-[8px] font-black opacity-10">Mounting...</div>
-                          ) : archiveFileList.map(f => (
-                              <button 
-                                  key={f} onClick={() => setSelectedFileInArchive(f)} 
-                                  className={`w-full text-left px-3 py-2 rounded-lg text-[8px] truncate transition-all ${selectedFileInArchive === f ? 'bg-blue-600 text-white shadow-xl' : 'text-zinc-600 hover:bg-white/5'}`}
-                              >
-                                  {f.split(/\\|\//).pop()}
-                              </button>
-                          ))}
+                              <div className="p-10 text-center text-[7px] font-black opacity-20 animate-pulse tracking-widest uppercase">Syncing Drive...</div>
+                          ) : archiveFileList.length === 0 ? (
+                              <div className="p-10 text-center text-[7px] font-black opacity-20 uppercase tracking-widest">No clean source code found</div>
+                          ) : (
+                              <div className="space-y-0.5 pb-10">
+                                  {(() => {
+                                      // Budujemy drzewo z płaskiej listy
+                                      const tree: any = {};
+                                      const garbageDirs = ['node_modules', '.git', '__macosx', '.ds_store', '.idea', '.vscode', 'bin', 'obj', 'dist', 'build', '.next', 'target', 'vendor', 'out', 'coverage', '.dfx'];
+                                      const garbageFiles = ['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'composer.lock', '.gitignore', '.eslintrc', '.prettierrc', 'readme.md', 'license', 'changelog'];
+                                      const garbageExts = ['.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.woff', '.woff2', '.ttf', '.eot', '.pdf', '.zip', '.exe', '.dll', '.so', '.pyc', '.class'];
+                                      
+                                      archiveFileList.forEach(path => {
+                                          const parts = path.split(/[\\/]/);
+                                          const fileName = parts[parts.length - 1].toLowerCase();
+                                          const fileExt = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.')) : '';
+                                          
+                                          // 1. Filtrowanie folderów
+                                          if (parts.some(p => garbageDirs.includes(p.toLowerCase()))) return;
+                                          // 2. Filtrowanie konkretnych nazw plików
+                                          if (garbageFiles.includes(fileName)) return;
+                                          // 3. Filtrowanie rozszerzeń binarnych/nie-kodowych
+                                          if (garbageExts.includes(fileExt)) return;
+                                          
+                                          let current = tree;
+                                          parts.forEach((part, i) => {
+                                              if (!current[part]) {
+                                                  current[part] = i === parts.length - 1 ? { __file: path } : {};
+                                              }
+                                              current = current[part];
+                                          });
+                                      });
+
+                                      // Rekurencyjna funkcja renderująca
+                                      const renderTree = (node: any, depth = 0, prefix = '') => {
+                                          return Object.entries(node).map(([name, value]: [string, any]) => {
+                                              const isFile = value.__file !== undefined;
+                                              const fullPath = isFile ? value.__file : null;
+                                              const currentPrefix = prefix ? `${prefix}/${name}` : name;
+
+                                              if (isFile) {
+                                                  return (
+                                                      <button 
+                                                        key={fullPath} 
+                                                        onClick={() => setSelectedFileInArchive(fullPath)}
+                                                        className={`w-full text-left px-2 py-1.5 rounded-lg text-[8px] truncate transition-all flex items-center gap-1.5 ${selectedFileInArchive === fullPath ? 'bg-blue-600/20 text-blue-400 border border-blue-600/30' : 'text-zinc-500 hover:bg-white/5 hover:text-zinc-300'}`}
+                                                        style={{ paddingLeft: `${depth * 10 + 8}px` }}
+                                                      >
+                                                          <span className="opacity-40">📄</span> {name}
+                                                      </button>
+                                                  );
+                                              } else {
+                                                  const children = renderTree(value, depth + 1, currentPrefix);
+                                                  if (children.length === 0) return null; // Ukrywamy puste foldery po filtracji
+                                                  return (
+                                                      <div key={currentPrefix} className="space-y-0.5">
+                                                          <div 
+                                                            className="px-2 py-1.5 text-[8px] font-black text-zinc-700 uppercase tracking-widest flex items-center gap-1.5 opacity-50"
+                                                            style={{ paddingLeft: `${depth * 10 + 8}px` }}
+                                                          >
+                                                              <span className="opacity-40 text-xs leading-none">📁</span> {name}
+                                                          </div>
+                                                          {children}
+                                                      </div>
+                                                  );
+                                              }
+                                          });
+                                      };
+
+                                      return renderTree(tree);
+                                  })()}
+                              </div>
+                          )}
                       </div>
                       <div className="p-3 bg-black">
                           <a href={`http://localhost:4000/${activeSub.codeContent.replace('[ZIP_FILE] ', '')}`} download className="w-full text-[8px] font-black border border-white/5 p-3 rounded-xl text-center block text-zinc-700 hover:text-white hover:bg-white/5 transition-all uppercase italic">Download RAW</a>

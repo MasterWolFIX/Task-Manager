@@ -90,51 +90,47 @@ export default function EditTask() {
     <div className="min-h-screen flex h-screen overflow-hidden bg-[#050505] text-[#e4e4e7] selection:bg-blue-600/30">
       
       {/* SHARED SIDEBAR */}
-      <aside className="w-80 border-r border-white/5 bg-[#0a0a0a] flex flex-col shrink-0 overflow-hidden">
-          <div className="p-10 pb-6">
-              <div className="flex items-center gap-4 mb-2">
-                <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center font-black text-white shadow-xl shadow-blue-500/20 text-xl italic uppercase">A</div>
-                <div>
-                    <h1 className="text-[15px] font-black tracking-tighter uppercase leading-tight">Admin</h1>
-                    <p className="text-[9px] text-zinc-700 font-bold uppercase tracking-[0.2em]">{user?.name}</p>
-                </div>
+      <aside className="w-56 border-r border-white/5 bg-[#0a0a0a] flex flex-col shrink-0 overflow-hidden">
+          <div className="p-5 pb-3">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white shadow-lg text-sm italic uppercase">A</div>
+                <h1 className="text-[11px] font-black uppercase tracking-tighter opacity-40 italic">Console</h1>
               </div>
           </div>
-          <div className="h-px w-full bg-gradient-to-r from-transparent via-white/5 to-transparent mb-8"></div>
-          <nav className="flex-1 px-4 space-y-2">
-              <Link href="/admin" className="flex items-center px-6 py-4 text-zinc-600 hover:text-white hover:bg-white/[0.03] rounded-3xl transition-all font-black uppercase text-[10px] tracking-[0.3em]">Dashboard</Link>
-              <Link href="/admin/classes" className="flex items-center px-6 py-4 text-zinc-600 hover:text-white hover:bg-white/[0.03] rounded-3xl transition-all font-black uppercase text-[10px] tracking-[0.3em]">Klasy</Link>
+          <div className="h-px bg-white/5 mb-4"></div>
+          <nav className="flex-1 px-3 space-y-1">
+              <Link href="/admin" className="flex items-center px-4 py-2 text-zinc-600 hover:text-white rounded-xl transition-all font-black uppercase text-[8px] tracking-widest">Dashboard</Link>
+              <Link href="/admin/classes" className="flex items-center px-4 py-2 text-zinc-600 hover:text-white rounded-xl transition-all font-black uppercase text-[8px] tracking-widest">Klasy</Link>
           </nav>
       </aside>
 
       {/* MAIN HUB */}
-      <section className="flex-1 flex flex-col overflow-hidden relative">
-          <header className="h-28 border-b border-white/5 flex items-center justify-between px-12 bg-black/20">
+      <section className="flex-1 flex flex-col overflow-hidden relative bg-[#050505]">
+          <header className="h-14 border-b border-white/5 flex items-center justify-between px-8 bg-[#050505]/80 backdrop-blur-3xl z-40">
               <div>
-                  <h2 className="text-[10px] font-black uppercase tracking-[0.6em] text-zinc-700 ml-1 mb-1">Configuration Matrix</h2>
-                  <h1 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">Edycja Zlecenia</h1>
+                  <h1 className="text-xl font-black text-white tracking-widest uppercase leading-none italic opacity-80">EDYCJA ZDANIA</h1>
               </div>
-              <div className="flex items-center gap-6">
-                  <button onClick={handleLogout} className="text-[10px] font-black uppercase tracking-[0.4em] text-red-600 hover:text-white hover:bg-red-600 transition-all border-2 border-red-600/30 px-8 py-3 rounded-2xl shadow-xl">
+              <div className="flex items-center gap-3">
+                  <button onClick={handleLogout} className="text-[8px] font-black uppercase tracking-widest text-red-600 border border-red-600/20 hover:bg-red-600 hover:text-white px-5 py-1.5 rounded-lg transition-all shadow-xl">
                       WYLOGUJ
                   </button>
-                  <Link href="/admin" className="text-zinc-600 hover:text-white text-[10px] font-black uppercase tracking-[0.4em] border border-white/5 px-6 py-3 rounded-2xl">&larr; ANALUJ</Link>
+                  <Link href="/admin" className="text-zinc-600 hover:text-white text-[8px] font-black uppercase tracking-widest border border-white/5 px-5 py-1.5 rounded-lg transition-all">&larr; ANALUJ</Link>
               </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto p-12 custom-scrollbar">
-              <form onSubmit={handleSubmit} className="max-w-6xl mx-auto grid grid-cols-12 gap-12 pt-4 pb-20">
+          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+              <form onSubmit={handleSubmit} className="max-w-5xl mx-auto grid grid-cols-12 gap-8 pt-2 pb-20">
                   
-                  <div className="col-span-8 space-y-8">
-                      <div className="bg-[#0a0a0a] border border-white/5 p-10 rounded-[48px] shadow-2xl relative overflow-hidden space-y-10">
-                          <div className="grid grid-cols-2 gap-8">
+                  <div className="col-span-8 space-y-6">
+                      <div className="bg-[#0a0a0a] border border-white/5 p-6 rounded-3xl shadow-2xl relative overflow-hidden space-y-6">
+                          <div className="grid grid-cols-2 gap-4">
                               <div className="col-span-2">
-                                  <label className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-800 ml-1 mb-3 block">Task Title</label>
-                                  <input required value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-black border border-white/5 rounded-3xl p-6 text-xl font-black text-white outline-none focus:border-blue-600/40 transition-all" />
+                                  <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 ml-1 mb-2 block">TYTUŁ</label>
+                                  <input required value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-black border border-white/5 rounded-xl p-4 text-base font-black text-white outline-none focus:border-blue-600/40 transition-all uppercase" placeholder="..." />
                               </div>
                               <div>
-                                  <label className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-800 ml-1 mb-3 block">Technology Stack</label>
-                                  <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full bg-zinc-950 border border-white/5 rounded-3xl p-6 text-[11px] font-black uppercase text-blue-500 outline-none appearance-none">
+                                  <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 ml-1 mb-2 block">TECHNOLOGIA</label>
+                                  <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full bg-zinc-950 border border-white/5 rounded-xl p-4 text-[9px] font-black uppercase text-blue-500 outline-none appearance-none cursor-pointer">
                                       <option value="javascript">JavaScript / TS</option>
                                       <option value="python">Python 3</option>
                                       <option value="java">Java 17+</option>
@@ -145,45 +141,46 @@ export default function EditTask() {
                                   </select>
                               </div>
                               <div>
-                                  <label className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-800 ml-1 mb-3 block">New Deadline</label>
-                                  <input required type="datetime-local" value={deadline} onChange={e => setDeadline(e.target.value)} className="w-full bg-zinc-950 border border-white/5 rounded-3xl p-6 text-[11px] font-bold text-white outline-none" />
+                                  <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 ml-1 mb-2 block">DEADLINE</label>
+                                  <input required type="datetime-local" value={deadline} onChange={e => setDeadline(e.target.value)} className="w-full bg-zinc-950 border border-white/5 rounded-xl p-4 text-[10px] font-bold text-white outline-none" />
                               </div>
                           </div>
 
                           <div>
-                              <label className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-800 ml-1 mb-4 block text-center font-black">Metoda Dostarczenia</label>
-                              <div className="grid grid-cols-3 gap-4">
+                              <label className="text-[7px] font-black uppercase tracking-[0.2em] text-zinc-800 ml-1 mb-3 block text-center font-black">METODA DOSTARCZENIA</label>
+                              <div className="grid grid-cols-3 gap-3">
                                   {['code', 'zip', 'both'].map((t) => (
-                                      <button key={t} type="button" onClick={() => setSubmissionType(t)} className={`p-6 rounded-3xl border transition-all ${submissionType === t ? 'bg-blue-600/10 border-blue-600 text-blue-500' : 'bg-black border-white/5 text-zinc-800'}`}>
-                                          <span className="text-[9px] font-black uppercase tracking-widest">{t === 'code' ? '📝 KOD' : t === 'zip' ? '📦 ZIP' : '🔄 DOWOLNE'}</span>
+                                      <button key={t} type="button" onClick={() => setSubmissionType(t)} className={`p-4 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1 ${submissionType === t ? 'bg-blue-600/10 border-blue-600 text-blue-500 shadow-xl' : 'bg-black border-white/5 text-zinc-800 hover:border-zinc-700'}`}>
+                                          <span className="text-xl">{t === 'code' ? '📝' : t === 'zip' ? '📦' : '🔄'}</span>
+                                          <span className="text-[7px] font-black uppercase tracking-widest">{t === 'code' ? 'KOD' : t === 'zip' ? 'ARCHIWUM' : 'DOWOLNE'}</span>
                                       </button>
                                   ))}
                               </div>
                           </div>
 
                           <div>
-                              <label className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-800 ml-1 mb-3 block">Technical Documentation</label>
-                              <textarea required rows={10} value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-black border border-white/5 rounded-[40px] p-8 text-[14px] leading-relaxed text-zinc-400 outline-none focus:border-blue-600/40 font-mono" />
+                              <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 ml-1 mb-2 block">DOKUMENTACJA</label>
+                              <textarea required rows={10} value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-black border border-white/5 rounded-2xl p-6 text-[11px] leading-relaxed text-zinc-500 outline-none focus:border-blue-600/40 font-mono transition-all" />
                           </div>
                       </div>
                   </div>
 
-                  <div className="col-span-4 space-y-8">
-                       <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[48px] shadow-2xl sticky top-8">
-                          <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-500 mb-8">Zmień Adresatów</h3>
-                          <div className="space-y-3 max-h-[40vh] overflow-y-auto custom-scrollbar pr-2 mb-10">
+                  <div className="col-span-4 space-y-6">
+                       <div className="bg-[#0a0a0a] border border-white/5 p-6 rounded-3xl shadow-2xl sticky top-8">
+                          <h3 className="text-[8px] font-black uppercase tracking-[0.4em] text-blue-500 mb-6 px-1">ADRESACI</h3>
+                          <div className="space-y-2 max-h-[40vh] overflow-y-auto custom-scrollbar pr-1 mb-6">
                               {classesWithUsers.map(c => (
-                                  <div key={c.id} className="border border-white/5 rounded-3xl bg-black/40 overflow-hidden">
-                                      <div className="p-4 flex items-center justify-between" onClick={() => setExpandedClasses(prev => prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id])}>
-                                          <span className="text-[10px] font-black uppercase text-zinc-400">{c.name}</span>
-                                          <span className="text-zinc-800">{expandedClasses.includes(c.id) ? '▲' : '▼'}</span>
+                                  <div key={c.id} className="border border-white/5 rounded-2xl bg-black/40 overflow-hidden">
+                                      <div className="p-3 flex items-center justify-between hover:bg-white/[0.02] cursor-pointer" onClick={() => setExpandedClasses(prev => prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id])}>
+                                          <span className="text-[9px] font-black uppercase text-zinc-500 tracking-widest">{c.name}</span>
+                                          <span className="text-zinc-800 text-[8px]">{expandedClasses.includes(c.id) ? '▲' : '▼'}</span>
                                       </div>
                                       {expandedClasses.includes(c.id) && (
-                                          <div className="p-2 space-y-1">
+                                          <div className="bg-black/60 border-t border-white/5 p-2 space-y-1">
                                               {c.classUsers?.map((cu: any) => (
-                                                  <label key={cu.user.id} className="flex justify-between p-3 rounded-2xl hover:bg-white/[0.03] cursor-pointer">
-                                                      <span className="text-[10px] font-bold text-zinc-500">{cu.user.name}</span>
-                                                      <input type="checkbox" checked={selectedUsers.includes(cu.user.id)} onChange={() => { setSelectedUsers(prev => prev.includes(cu.user.id) ? prev.filter(id => id !== cu.user.id) : [...prev, cu.user.id]); }} className="w-4 h-4 rounded border-zinc-800 bg-black text-blue-600 focus:ring-0" />
+                                                  <label key={cu.user.id} className="flex justify-between items-center p-2 rounded-xl hover:bg-white/[0.03] cursor-pointer group">
+                                                      <span className="text-[8px] font-bold text-zinc-600 group-hover:text-zinc-400">{cu.user.name}</span>
+                                                      <input type="checkbox" checked={selectedUsers.includes(cu.user.id)} onChange={() => { setSelectedUsers(prev => prev.includes(cu.user.id) ? prev.filter(id => id !== cu.user.id) : [...prev, cu.user.id]); }} className="w-3.5 h-3.5 rounded border-zinc-800 bg-black text-blue-600 focus:ring-0" />
                                                   </label>
                                               ))}
                                           </div>
@@ -191,8 +188,8 @@ export default function EditTask() {
                                   </div>
                               ))}
                           </div>
-                          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[11px] tracking-[0.5em] py-6 rounded-[32px] shadow-2xl transition-all shadow-blue-600/10">
-                              ZATWIERDŹ ZMIANY
+                          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[10px] tracking-[0.4em] py-4 rounded-2xl shadow-2xl transition-all shadow-blue-600/10 active:scale-95">
+                              ZATWIERDŹ
                           </button>
                       </div>
                   </div>
