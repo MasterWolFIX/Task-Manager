@@ -19,16 +19,33 @@ export default function NewTask() {
 
     const [classesWithUsers, setClassesWithUsers] = useState<any[]>([]);
     const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
-    const [expandedClasses, setExpandedClasses] = useState<number[]>([]);
+    const [expandedClasses, setExpandedClasses] = useState<(number | string)[]>([]);
 
     useEffect(() => {
         if (!_hasHydrated) return;
         if (!token || user?.role !== 'admin') { router.push('/login'); return; }
 
-        apiFetch('/classes')
-            .then(res => res.json())
-            .then(data => setClassesWithUsers(Array.isArray(data) ? data : []))
-            .catch(console.error);
+        Promise.all([
+            apiFetch('/classes').then(res => res.json()),
+            apiFetch('/classes/users').then(res => res.json())
+        ]).then(([clsData, usrData]) => {
+            const classes = Array.isArray(clsData) ? clsData : [];
+            const allUsers = Array.isArray(usrData) ? usrData.filter((u: any) => u.role !== 'admin') : [];
+
+            // Zestaw ID uczniów przypisanych do jakiejkolwiek klasy
+            const assignedIds = new Set<number>();
+            classes.forEach(c => c.classUsers?.forEach((cu: any) => assignedIds.add(cu.user.id)));
+
+            const unassigned = allUsers.filter(u => !assignedIds.has(u.id));
+            if (unassigned.length > 0) {
+                classes.push({
+                    id: 'unassigned',
+                    name: 'BEZ KLASY',
+                    classUsers: unassigned.map(u => ({ user: u }))
+                });
+            }
+            setClassesWithUsers(classes);
+        }).catch(console.error);
     }, [token, user, router, _hasHydrated]);
 
     const handleSubmit = async (e: any) => {
@@ -81,7 +98,7 @@ export default function NewTask() {
             <section className="flex-1 flex flex-col overflow-hidden relative bg-[#050505]">
                 <header className="h-14 border-b border-white/5 flex items-center justify-between px-8 bg-[#050505]/80 backdrop-blur-3xl z-40">
                     <div>
-                        <h1 className="text-xl font-black text-white tracking-widest uppercase leading-none italic opacity-80">NOWE ZDANIE</h1>
+                        <h1 className="text-xl font-black text-white tracking-widest uppercase leading-none italic opacity-80">NOWE ZADANIE</h1>
                     </div>
                     <div className="flex items-center gap-3">
                         <Link href="/admin" className="text-zinc-600 hover:text-white text-[8px] font-black uppercase tracking-widest border border-white/5 px-5 py-1.5 rounded-lg transition-all">&larr; ANULUJ</Link>
@@ -96,7 +113,7 @@ export default function NewTask() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="col-span-2">
                                         <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 ml-1 mb-2 block">TYTUŁ</label>
-                                        <input required value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-black border border-white/5 rounded-xl p-4 text-base font-black text-white outline-none focus:border-blue-600/40 transition-all placeholder:text-zinc-900 uppercase" placeholder="Algorytm..." />
+                                        <input required value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-black border border-white/5 rounded-xl p-4 text-base font-black text-white outline-none focus:border-blue-600/40 transition-all placeholder:text-zinc-900" placeholder="Algorytm..." />
                                     </div>
                                     <div>
                                         <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 ml-1 mb-2 block">JĘZYK</label>
@@ -117,12 +134,12 @@ export default function NewTask() {
                                 </div>
 
                                 <div>
-                                    <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 ml-1 mb-3 block text-center">METODA ODANIA</label>
+                                    <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 ml-1 mb-3 block text-center">METODA ODDANIA</label>
                                     <div className="grid grid-cols-3 gap-3">
                                         {[
                                             { id: 'code', label: 'Kod', icon: '📝' },
-                                            { id: 'zip', label: 'Archiv', icon: '📦' },
-                                            { id: 'both', label: 'Gęste', icon: '🔄' }
+                                            { id: 'zip', label: 'Archiwum', icon: '📦' },
+                                            { id: 'both', label: 'Obydwa', icon: '🔄' }
                                         ].map((t) => (
                                             <button key={t.id} type="button" onClick={() => setSubmissionType(t.id)} className={`p-4 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1 ${submissionType === t.id ? 'bg-blue-600/10 border-blue-600 text-blue-500 shadow-xl' : 'bg-black border-white/5 text-zinc-800 hover:border-zinc-700'}`}>
                                                 <span className="text-xl">{t.icon}</span>
@@ -151,7 +168,23 @@ export default function NewTask() {
                                         <div key={c.id} className="border border-white/5 rounded-2xl overflow-hidden bg-black/40">
                                             <div className="p-3 flex items-center justify-between hover:bg-white/[0.02] cursor-pointer" onClick={() => setExpandedClasses(prev => prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id])}>
                                                 <div className="flex items-center gap-3">
-                                                    <input type="checkbox" checked={c.classUsers?.length > 0 && c.classUsers?.every((cu: any) => selectedUsers.includes(cu.user.id))} onChange={(e) => { e.stopPropagation(); /* select all */ }} className="w-3.5 h-3.5 rounded border-zinc-800 bg-black text-blue-600 focus:ring-0" />
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={c.classUsers?.length > 0 && c.classUsers?.every((cu: any) => selectedUsers.includes(cu.user.id))}
+                                                        onChange={(e) => {
+                                                            e.stopPropagation();
+                                                            const classUserIds = c.classUsers?.map((cu: any) => cu.user.id) || [];
+                                                            if (classUserIds.length === 0) return;
+
+                                                            const isAllSelected = classUserIds.every((id: number) => selectedUsers.includes(id));
+                                                            if (isAllSelected) {
+                                                                setSelectedUsers(prev => prev.filter(id => !classUserIds.includes(id)));
+                                                            } else {
+                                                                setSelectedUsers(prev => Array.from(new Set([...prev, ...classUserIds])));
+                                                            }
+                                                        }}
+                                                        className="w-3.5 h-3.5 rounded border-zinc-800 bg-black text-blue-600 focus:ring-0"
+                                                    />
                                                     <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">{c.name}</span>
                                                 </div>
                                                 <span className="text-zinc-800 text-[8px]">{expandedClasses.includes(c.id) ? '▲' : '▼'}</span>

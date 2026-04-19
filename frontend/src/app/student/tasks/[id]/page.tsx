@@ -145,7 +145,7 @@ export default function StudentDetails() {
                 <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                         <Link href="/student" className="w-8 h-8 rounded-xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center font-bold text-blue-400 hover:bg-blue-600/20 shrink-0">&larr;</Link>
-                        <h1 className="font-black uppercase text-[10px] tracking-[0.3em] text-zinc-100 italic hidden sm:block">Task Explorer</h1>
+                        <h1 className="font-black uppercase text-[10px] tracking-[0.3em] text-zinc-100 italic hidden sm:block">Eksplorator Zadań</h1>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                         {isLocked && (
@@ -256,7 +256,7 @@ export default function StudentDetails() {
                                     onClick={submitSolution} disabled={isDeadlinePassed || isLocked}
                                     className={`h-12 sm:h-14 px-8 sm:px-12 rounded-xl sm:rounded-2xl font-black uppercase text-[10px] tracking-[0.3em] shadow-2xl transition-all active:scale-95 italic ${(isDeadlinePassed || isLocked) ? 'bg-zinc-900 text-zinc-700 cursor-not-allowed opacity-40' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20'}`}
                                 >
-                                    {isLocked ? 'ZABLOKOWANO' : (mySub ? 'Aktualizuj Edycję' : 'Wydaj Rozwiązanie')}
+                                    {isLocked ? 'ZABLOKOWANO' : (mySub ? 'Zaktualizuj Kod' : 'Wyślij Rozwiązanie')}
                                 </button>
                             </div>
 

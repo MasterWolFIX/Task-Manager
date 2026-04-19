@@ -22,7 +22,7 @@ export default function EditTask() {
 
     const [classesWithUsers, setClassesWithUsers] = useState<any[]>([]);
     const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
-    const [expandedClasses, setExpandedClasses] = useState<number[]>([]);
+    const [expandedClasses, setExpandedClasses] = useState<(number | string)[]>([]);
 
     useEffect(() => {
         if (!_hasHydrated) return;
@@ -30,13 +30,15 @@ export default function EditTask() {
 
         const loadAll = async () => {
             try {
-                const [taskRes, classRes] = await Promise.all([
+                const [taskRes, classRes, userRes] = await Promise.all([
                     apiFetch(`/tasks/${id}`),
-                    apiFetch('/classes')
+                    apiFetch('/classes'),
+                    apiFetch('/classes/users')
                 ]);
 
                 const task = await taskRes.json();
-                const classes = await classRes.json();
+                const clsData = await classRes.json();
+                const usrData = await userRes.json();
 
                 setTitle(task.title);
                 setDescription(task.description);
@@ -52,7 +54,22 @@ export default function EditTask() {
                         .filter((id: number | undefined) => id !== undefined);
                     setSelectedUsers(assignedIds);
                 }
-                setClassesWithUsers(Array.isArray(classes) ? classes : []);
+
+                const classes = Array.isArray(clsData) ? clsData : [];
+                const allUsers = Array.isArray(usrData) ? usrData.filter((u: any) => u.role !== 'admin') : [];
+
+                const assignedIds = new Set<number>();
+                classes.forEach(c => c.classUsers?.forEach((cu: any) => assignedIds.add(cu.user.id)));
+
+                const unassigned = allUsers.filter(u => !assignedIds.has(u.id));
+                if (unassigned.length > 0) {
+                    classes.push({
+                        id: 'unassigned',
+                        name: 'BEZ KLASY',
+                        classUsers: unassigned.map(u => ({ user: u }))
+                    });
+                }
+                setClassesWithUsers(classes);
                 setLoading(false);
             } catch (err) { console.error(err); }
         };
@@ -108,7 +125,7 @@ export default function EditTask() {
             <section className="flex-1 flex flex-col overflow-hidden relative bg-[#050505]">
                 <header className="h-14 border-b border-white/5 flex items-center justify-between px-8 bg-[#050505]/80 backdrop-blur-3xl z-40">
                     <div>
-                        <h1 className="text-xl font-black text-white tracking-widest uppercase leading-none italic opacity-80">EDYCJA ZDANIA</h1>
+                        <h1 className="text-xl font-black text-white tracking-widest uppercase leading-none italic opacity-80">EDYCJA ZADANIA</h1>
                     </div>
                     <div className="flex items-center gap-3">
                         <Link href="/admin" className="text-zinc-600 hover:text-white text-[8px] font-black uppercase tracking-widest border border-white/5 px-5 py-1.5 rounded-lg transition-all">&larr; ANULUJ</Link>
@@ -123,7 +140,7 @@ export default function EditTask() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="col-span-2">
                                         <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 ml-1 mb-2 block">TYTUŁ</label>
-                                        <input required value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-black border border-white/5 rounded-xl p-4 text-base font-black text-white outline-none focus:border-blue-600/40 transition-all uppercase" placeholder="..." />
+                                        <input required value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-black border border-white/5 rounded-xl p-4 text-base font-black text-white outline-none focus:border-blue-600/40 transition-all" placeholder="..." />
                                     </div>
                                     <div>
                                         <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 ml-1 mb-2 block">TECHNOLOGIA</label>
@@ -169,7 +186,26 @@ export default function EditTask() {
                                     {classesWithUsers.map(c => (
                                         <div key={c.id} className="border border-white/5 rounded-2xl bg-black/40 overflow-hidden">
                                             <div className="p-3 flex items-center justify-between hover:bg-white/[0.02] cursor-pointer" onClick={() => setExpandedClasses(prev => prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id])}>
-                                                <span className="text-[9px] font-black uppercase text-zinc-500 tracking-widest">{c.name}</span>
+                                                <div className="flex items-center gap-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={c.classUsers?.length > 0 && c.classUsers?.every((cu: any) => selectedUsers.includes(cu.user.id))}
+                                                        onChange={(e) => {
+                                                            e.stopPropagation();
+                                                            const classUserIds = c.classUsers?.map((cu: any) => cu.user.id) || [];
+                                                            if (classUserIds.length === 0) return;
+
+                                                            const isAllSelected = classUserIds.every((id: number) => selectedUsers.includes(id));
+                                                            if (isAllSelected) {
+                                                                setSelectedUsers(prev => prev.filter(id => !classUserIds.includes(id)));
+                                                            } else {
+                                                                setSelectedUsers(prev => Array.from(new Set([...prev, ...classUserIds])));
+                                                            }
+                                                        }}
+                                                        className="w-3.5 h-3.5 rounded border-zinc-800 bg-black text-blue-600 focus:ring-0"
+                                                    />
+                                                    <span className="text-[9px] font-black uppercase text-zinc-500 tracking-widest">{c.name}</span>
+                                                </div>
                                                 <span className="text-zinc-800 text-[8px]">{expandedClasses.includes(c.id) ? '▲' : '▼'}</span>
                                             </div>
                                             {expandedClasses.includes(c.id) && (

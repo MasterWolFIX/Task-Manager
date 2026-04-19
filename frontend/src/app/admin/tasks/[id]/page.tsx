@@ -237,7 +237,7 @@ export default function AdminTaskDetails() {
                             onClick={() => setShowReviewed(!showReviewed)}
                             className={`text-[8px] font-black px-2 py-0.5 rounded transition-all uppercase tracking-tighter border ${showReviewed ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-white/5 border-white/10 text-zinc-500 hover:text-white'}`}
                         >
-                            {showReviewed ? '👁️ All Records' : '🎯 To Match'}
+                            {showReviewed ? '👁️ Wszystkie' : '🎯 Oczekujące'}
                         </button>
                     </div>
                 </div>
@@ -263,10 +263,10 @@ export default function AdminTaskDetails() {
                                 <div className="flex flex-col flex-1 truncate">
                                     <span className="text-[9px] font-black uppercase tracking-widest truncate">{sub.user?.name || 'Student ID: ' + sub.userId}</span>
                                     <div className="flex items-center gap-2 mt-0.5">
-                                        <span className="text-[7px] font-bold opacity-40 uppercase tracking-tighter">{sub.type === 'zip' ? '📦 Archive' : '📄 Code'}</span>
-                                        {sub.status === 'rejected' && <span className="text-[6px] font-black text-red-500 uppercase px-1 rounded bg-red-500/10 border border-red-500/10 italic">Rejected</span>}
-                                        {sub.status === 'graded' && <span className="text-[6px] font-black text-emerald-500 uppercase px-1 rounded bg-emerald-500/10 border border-emerald-500/10 italic">Graded</span>}
-                                        {(!sub.status || sub.status === 'pending') && <span className="text-[6px] font-black text-zinc-500 uppercase px-1 rounded bg-zinc-500/10 border border-zinc-500/10 italic animate-pulse">Pending</span>}
+                                        <span className="text-[7px] font-bold opacity-40 uppercase tracking-tighter">{sub.type === 'zip' ? '📦 Archiwum' : '📄 Kod'}</span>
+                                        {sub.status === 'rejected' && <span className="text-[6px] font-black text-red-500 uppercase px-1 rounded bg-red-500/10 border border-red-500/10 italic">Odrzucone</span>}
+                                        {sub.status === 'graded' && <span className="text-[6px] font-black text-emerald-500 uppercase px-1 rounded bg-emerald-500/10 border border-emerald-500/10 italic">Ocenione</span>}
+                                        {(!sub.status || sub.status === 'pending') && <span className="text-[6px] font-black text-zinc-500 uppercase px-1 rounded bg-zinc-500/10 border border-zinc-500/10 italic animate-pulse">Oczekuje</span>}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -282,7 +282,7 @@ export default function AdminTaskDetails() {
                             </div>
                         ))
                     ) : (
-                        <div className="p-10 text-center text-[8px] font-black uppercase tracking-[0.3em] opacity-20 italic">No submissions detected</div>
+                        <div className="p-10 text-center text-[8px] font-black uppercase tracking-[0.3em] opacity-20 italic">Brak przesłanych rozwiązań</div>
                     )}
                 </nav>
             </aside>
@@ -295,7 +295,7 @@ export default function AdminTaskDetails() {
                         <h1 className="text-lg font-black text-white tracking-widest uppercase truncate max-w-sm italic opacity-80">{task.title}</h1>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Link href="/admin" className="text-zinc-600 hover:text-white text-[8px] font-black uppercase tracking-widest border border-white/5 px-5 py-1.5 rounded-lg transition-all">BACK</Link>
+                        <Link href="/admin" className="text-zinc-600 hover:text-white text-[8px] font-black uppercase tracking-widest border border-white/5 px-5 py-1.5 rounded-lg transition-all">← WRÓĆ</Link>
                     </div>
                 </header>
 
@@ -310,9 +310,9 @@ export default function AdminTaskDetails() {
                                     </div>
                                     <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5 custom-scrollbar pb-10">
                                         {isLoadingArchive ? (
-                                            <div className="p-10 text-center text-[7px] font-black opacity-20 animate-pulse tracking-widest uppercase">Syncing Drive...</div>
+                                            <div className="p-10 text-center text-[7px] font-black opacity-20 animate-pulse tracking-widest uppercase">Wczytywanie...</div>
                                         ) : archiveFileList.length === 0 ? (
-                                            <div className="p-10 text-center text-[7px] font-black opacity-20 uppercase tracking-widest">No clean source code found</div>
+                                            <div className="p-10 text-center text-[7px] font-black opacity-20 uppercase tracking-widest">Brak kodu źródłowego</div>
                                         ) : (
                                             <div className="space-y-0.5 pb-10">
                                                 {(() => {
@@ -387,7 +387,7 @@ export default function AdminTaskDetails() {
 
                             <div className="flex-1 bg-[#111] flex flex-col relative">
                                 <div className="h-8 bg-black/40 border-b border-white/5 flex items-center px-8 text-[7px] font-black uppercase tracking-[0.5em] text-zinc-800 italic">
-                                    {activeSub?.type === 'zip' ? (selectedFileInArchive || 'Select a file...') : 'Source Preview'} {isLoadingFile && <span className="ml-4 animate-pulse text-blue-600">Syncing...</span>}
+                                    {activeSub?.type === 'zip' ? (selectedFileInArchive || 'Wybierz plik...') : 'Podgląd kodu'} {isLoadingFile && <span className="ml-4 animate-pulse text-blue-600">Wczytywanie...</span>}
                                 </div>
                                 <div className="flex-1 overflow-auto">
                                     <CodeMirror
@@ -404,7 +404,7 @@ export default function AdminTaskDetails() {
                         <div className="h-28 bg-[#0a0a0a] border-t border-white/5 p-4 flex items-center justify-between px-10 shadow-[0_-30px_90px_rgba(0,0,0,0.8)] z-50">
                             <div className="flex items-center gap-6 flex-1">
                                 <div className="w-20">
-                                    <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 mb-1 block text-center italic">SCORE</label>
+                                    <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 mb-1 block text-center italic">OCENA</label>
                                     <input
                                         type="number" min="1" max="6"
                                         className="w-full bg-black border border-white/5 rounded-xl h-12 text-center text-blue-500 font-black text-2xl outline-none focus:border-blue-600/30 transition-all font-mono shadow-2xl"
@@ -413,10 +413,10 @@ export default function AdminTaskDetails() {
                                     />
                                 </div>
                                 <div className="flex-1">
-                                    <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 mb-1 block ml-3 italic">FEEDBACK NOTES</label>
+                                    <label className="text-[7px] font-black uppercase tracking-[0.4em] text-zinc-800 mb-1 block ml-3 italic">KOMENTARZ</label>
                                     <input
                                         className="w-full bg-black border border-white/5 rounded-xl h-12 px-6 text-[10px] text-zinc-400 outline-none focus:border-blue-600/20 transition-all font-bold placeholder:italic"
-                                        placeholder="Review comments..."
+                                        placeholder="Komentarz do oceny..."
                                         value={feedback}
                                         onChange={(e) => setFeedback(e.target.value)}
                                     />
@@ -451,7 +451,7 @@ export default function AdminTaskDetails() {
                 ) : (
                     <div className="flex-1 bg-[#050505] flex flex-col items-center justify-center text-[8px] uppercase tracking-[0.5em] z-0">
                         <div className="animate-pulse mb-4 text-xl font-black text-zinc-600 border border-white/5 px-10 py-5 rounded-2xl bg-[#0a0a0a] shadow-[0_0_50px_rgba(0,0,0,0.5)] italic">TERMINAL STANDBY</div>
-                        <div className="text-[9px] text-zinc-500 font-bold tracking-widest opacity-60">Select submission from sidebar to initialize protocol</div>
+                        <div className="text-[9px] text-zinc-500 font-bold tracking-widest opacity-60">Wybierz przesłane rozwiązanie z listy po lewej</div>
                     </div>
                 )}
             </section>

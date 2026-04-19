@@ -20,6 +20,7 @@ export default function AdminClasses() {
     const [newStudentEmail, setNewStudentEmail] = useState('');
     const [targetClassId, setTargetClassId] = useState('');
     const [bulkData, setBulkData] = useState('');
+    const [recruitMsg, setRecruitMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
     // Transfer
     const [transferUserId, setTransferUserId] = useState('');
@@ -53,16 +54,56 @@ export default function AdminClasses() {
 
     const handleCreateSingle = async (e: any) => {
         e.preventDefault();
-        const res = await apiFetch('/classes/users', {
-            method: 'POST',
-            body: JSON.stringify({ name: newStudentName, email: newStudentEmail })
-        });
-        if (!res.ok) return alert('Błąd');
-        const nu = await res.json();
-        if (targetClassId) {
-            await apiFetch(`/classes/${targetClassId}/assign`, { method: 'POST', body: JSON.stringify({ userId: nu.id }) });
+        setRecruitMsg(null);
+        try {
+            const res = await apiFetch('/classes/users', {
+                method: 'POST',
+                body: JSON.stringify({ name: newStudentName, email: newStudentEmail })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                setRecruitMsg({ type: 'err', text: err.message || 'Nie udało się dodać ucznia.' });
+                return;
+            }
+            const nu = await res.json();
+            if (targetClassId) {
+                await apiFetch(`/classes/${targetClassId}/assign`, { method: 'POST', body: JSON.stringify({ userId: nu.id }) });
+            }
+            setNewStudentName('');
+            setNewStudentEmail('');
+            setRecruitMsg({ type: 'ok', text: `Dodano ucznia: ${nu.name}` });
+            fetchData();
+        } catch (err) {
+            setRecruitMsg({ type: 'err', text: 'Błąd połączenia z serwerem.' });
         }
-        setNewStudentName(''); setNewStudentEmail(''); fetchData();
+    };
+
+    const handleBulkImport = async () => {
+        if (!bulkData.trim()) return;
+        setRecruitMsg(null);
+        const lines = bulkData.trim().split('\n').filter(l => l.trim());
+        let ok = 0; let fail = 0;
+        for (const line of lines) {
+            const parts = line.split(';').map(s => s.trim());
+            if (parts.length < 2) { fail++; continue; }
+            const [name, email, classId] = parts;
+            try {
+                const res = await apiFetch('/classes/users', {
+                    method: 'POST',
+                    body: JSON.stringify({ name, email })
+                });
+                if (!res.ok) { fail++; continue; }
+                const nu = await res.json();
+                const cid = classId || targetClassId;
+                if (cid) {
+                    await apiFetch(`/classes/${cid}/assign`, { method: 'POST', body: JSON.stringify({ userId: nu.id }) });
+                }
+                ok++;
+            } catch { fail++; }
+        }
+        setBulkData('');
+        setRecruitMsg({ type: ok > 0 ? 'ok' : 'err', text: `Zaimportowano: ${ok} / Błędy: ${fail}` });
+        fetchData();
     };
 
     const handleTransfer = async (e: any) => {
@@ -100,14 +141,14 @@ export default function AdminClasses() {
                 <nav className="flex-1 px-3 space-y-1">
                     <Link href="/admin" className="flex items-center px-4 py-2 text-zinc-600 hover:text-white rounded-xl font-black uppercase text-[8px] tracking-widest transition-all">Dashboard</Link>
                     <Link href="/admin/classes" className="flex items-center px-4 py-2 bg-blue-600/10 text-blue-500 rounded-xl font-black uppercase text-[8px] tracking-widest border border-blue-600/20 shadow-lg shadow-blue-900/10">Grupy</Link>
-                    <Link href="/admin/settings" className="flex items-center px-4 py-2 text-zinc-600 hover:text-white rounded-xl font-black uppercase text-[8px] tracking-widest transition-all">Settings</Link>
+                    <Link href="/admin/settings" className="flex items-center px-4 py-2 text-zinc-600 hover:text-white rounded-xl font-black uppercase text-[8px] tracking-widest transition-all">Ustawienia</Link>
                 </nav>
             </aside>
 
             <section className="flex-1 flex flex-col overflow-hidden relative">
                 <header className="h-14 border-b border-white/5 flex items-center justify-between px-8 bg-[#050505]">
                     <div>
-                        <h1 className="text-xl font-black text-white tracking-widest uppercase leading-none italic opacity-80">GROUPS</h1>
+                        <h1 className="text-xl font-black text-white tracking-widest uppercase leading-none italic opacity-80">GRUPY</h1>
                     </div>
                     <div className="flex items-center gap-3">
                         <button onClick={() => router.push('/admin/tasks/new')} className="bg-white hover:bg-zinc-200 text-black px-5 py-1.5 rounded-lg font-black uppercase text-[9px] tracking-widest transition-all">+ NOWE</button>
@@ -122,34 +163,114 @@ export default function AdminClasses() {
                             <div className="bg-[#0a0a0a] border border-white/5 p-6 rounded-[24px] shadow-2xl space-y-4">
                                 <label className="text-[7px] font-black uppercase tracking-[0.4em] text-blue-500 italic px-1">INICJUJ GRUPĘ</label>
                                 <form onSubmit={handleCreateClass} className="flex gap-2">
-                                    <input required placeholder="NAZWA..." value={newClassName} onChange={e => setNewClassName(e.target.value)} className="flex-1 bg-black border border-white/5 rounded-xl p-3 text-[9px] font-black text-white uppercase outline-none focus:border-blue-600/40" />
+                                    <input required placeholder="Nazwa..." value={newClassName} onChange={e => setNewClassName(e.target.value)} className="flex-1 bg-black border border-white/5 rounded-xl p-3 text-[9px] font-black text-white outline-none focus:border-blue-600/40" />
                                     <button type="submit" className="bg-white hover:bg-zinc-200 text-black px-4 rounded-xl font-black text-[8px] uppercase tracking-widest transition-all">STWÓRZ</button>
                                 </form>
                             </div>
 
                             <div className="bg-[#0a0a0a] border border-white/5 p-6 rounded-[24px] shadow-2xl space-y-4">
+                                {/* Nagłówek z zakładkami */}
                                 <div className="flex justify-between items-center px-1">
                                     <label className="text-[7px] font-black uppercase tracking-[0.4em] text-emerald-500 italic">REKRUTACJA</label>
-                                    <div className="flex bg-black p-0.5 rounded-md border border-white/5 text-[6px] font-black">
-                                        <button onClick={() => setAddMode('single')} className={`px-2 py-1 rounded ${addMode === 'single' ? 'bg-zinc-900 text-white' : 'text-zinc-700'}`}>S</button>
-                                        <button onClick={() => setAddMode('bulk')} className={`px-2 py-1 rounded ${addMode === 'bulk' ? 'bg-zinc-900 text-white' : 'text-zinc-700'}`}>B</button>
+                                    <div className="flex bg-black p-0.5 rounded-lg border border-white/5 gap-0.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setAddMode('single'); setRecruitMsg(null); }}
+                                            className={`px-3 py-1.5 rounded-md text-[7px] font-black uppercase tracking-wider transition-all ${addMode === 'single' ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30' : 'text-zinc-700 hover:text-zinc-400'
+                                                }`}
+                                        >Pojedynczo</button>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setAddMode('bulk'); setRecruitMsg(null); }}
+                                            className={`px-3 py-1.5 rounded-md text-[7px] font-black uppercase tracking-wider transition-all ${addMode === 'bulk' ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30' : 'text-zinc-700 hover:text-zinc-400'
+                                                }`}
+                                        >Masowo</button>
                                     </div>
                                 </div>
+
+                                {/* Komunikat inline */}
+                                {recruitMsg && (
+                                    <div className={`px-3 py-2 rounded-xl text-[8px] font-black uppercase tracking-wider border ${recruitMsg.type === 'ok'
+                                            ? 'bg-emerald-600/10 border-emerald-600/20 text-emerald-400'
+                                            : 'bg-red-600/10 border-red-600/20 text-red-400'
+                                        }`}>
+                                        {recruitMsg.type === 'ok' ? '✓ ' : '✕ '}{recruitMsg.text}
+                                    </div>
+                                )}
+
                                 {addMode === 'single' ? (
-                                    <form onSubmit={handleCreateSingle} className="space-y-2">
-                                        <input required placeholder="Imię i Nazwisko" value={newStudentName} onChange={e => setNewStudentName(e.target.value)} className="w-full bg-black border border-white/5 rounded-xl p-3 text-[9px] font-black text-white outline-none focus:border-blue-600/40 transition-colors" />
-                                        <input required type="email" placeholder="adres@email.pl" value={newStudentEmail} onChange={e => setNewStudentEmail(e.target.value)} className="w-full bg-black border border-white/5 rounded-xl p-3 text-[9px] font-black text-white outline-none focus:border-blue-600/40 transition-colors" />
-                                        <div className="flex gap-2">
-                                            <select value={targetClassId} onChange={e => setTargetClassId(e.target.value)} className="flex-1 bg-zinc-950 border border-white/5 rounded-xl p-3 text-[8px] font-black text-zinc-500 outline-none appearance-none cursor-pointer uppercase text-center">
-                                                <option value="">DOCELOWA GRUPA</option>
+                                    <form onSubmit={handleCreateSingle} className="space-y-3">
+                                        <div className="space-y-1">
+                                            <label className="text-[7px] font-black uppercase tracking-widest text-zinc-700 ml-1">Imię i nazwisko</label>
+                                            <input
+                                                required
+                                                placeholder="Jan Kowalski"
+                                                value={newStudentName}
+                                                onChange={e => setNewStudentName(e.target.value)}
+                                                className="w-full bg-black border border-white/5 rounded-xl p-3 text-[9px] font-black text-white outline-none focus:border-emerald-600/40 transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[7px] font-black uppercase tracking-widest text-zinc-700 ml-1">Adres e-mail</label>
+                                            <input
+                                                required
+                                                type="email"
+                                                placeholder="jan@szkola.pl"
+                                                value={newStudentEmail}
+                                                onChange={e => setNewStudentEmail(e.target.value)}
+                                                className="w-full bg-black border border-white/5 rounded-xl p-3 text-[9px] font-black text-white outline-none focus:border-emerald-600/40 transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[7px] font-black uppercase tracking-widest text-zinc-700 ml-1">Przypisz do grupy <span className="opacity-40">(opcjonalnie)</span></label>
+                                            <select
+                                                value={targetClassId}
+                                                onChange={e => setTargetClassId(e.target.value)}
+                                                className="w-full bg-zinc-950 border border-white/5 rounded-xl p-3 text-[8px] font-black text-zinc-400 outline-none appearance-none cursor-pointer"
+                                            >
+                                                <option value="">— brak grupy —</option>
                                                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                             </select>
-                                            <button type="submit" className="bg-emerald-600 text-black px-4 rounded-xl font-black text-[8px] uppercase tracking-widest transition-all shadow-xl">DODAJ</button>
                                         </div>
+                                        <button
+                                            type="submit"
+                                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-xl font-black text-[8px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20 active:scale-95"
+                                        >
+                                            + Dodaj ucznia
+                                        </button>
                                     </form>
                                 ) : (
                                     <div className="space-y-3">
-                                        <textarea rows={4} value={bulkData} onChange={e => setBulkData(e.target.value)} placeholder="JAN KOWALSKI; JAN@SZKOLA.PL" className="w-full bg-black border border-white/5 rounded-[20px] p-4 text-[9px] font-mono text-zinc-700 outline-none" />
+                                        <div className="space-y-1">
+                                            <label className="text-[7px] font-black uppercase tracking-widest text-zinc-700 ml-1">Każdy wiersz to jeden uczeń</label>
+                                            <p className="text-[7px] text-zinc-800 ml-1 font-mono">FORMAT: Imię Nazwisko; email@domena.pl; NazwaGrupy</p>
+                                        </div>
+                                        <textarea
+                                            rows={5}
+                                            value={bulkData}
+                                            onChange={e => setBulkData(e.target.value)}
+                                            placeholder={`Jan Kowalski; jan@szkola.pl; 5TI\nAnna Nowak; anna@szkola.pl; 5TI\nPiotr Marek; piotr@szkola.pl`}
+                                            className="w-full bg-black border border-white/5 rounded-[16px] p-4 text-[9px] font-mono text-zinc-400 outline-none focus:border-emerald-600/30 transition-colors resize-none leading-relaxed"
+                                        />
+                                        <div className="space-y-1">
+                                            <label className="text-[7px] font-black uppercase tracking-widest text-zinc-700 ml-1">Domyślna grupa <span className="opacity-40">(jeśli nie podano w wierszu)</span></label>
+                                            <select
+                                                value={targetClassId}
+                                                onChange={e => setTargetClassId(e.target.value)}
+                                                className="w-full bg-zinc-950 border border-white/5 rounded-xl p-3 text-[8px] font-black text-zinc-400 outline-none appearance-none cursor-pointer"
+                                            >
+                                                <option value="">— brak —</option>
+                                                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleBulkImport}
+                                            disabled={!bulkData.trim()}
+                                            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed text-white py-2.5 rounded-xl font-black text-[8px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20 active:scale-95"
+                                        >
+                                            Importuj listę
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -158,7 +279,7 @@ export default function AdminClasses() {
                                 <label className="text-[7px] font-black uppercase tracking-[0.4em] text-orange-500 italic px-1">TRANSFER</label>
                                 <form onSubmit={handleTransfer} className="space-y-2">
                                     <select required value={transferUserId} onChange={e => setTransferUserId(e.target.value)} className="w-full bg-black border border-white/5 rounded-xl p-3 text-[9px] font-black text-zinc-400 outline-none appearance-none cursor-pointer uppercase">
-                                        <option value="">STUDENT...</option>
+                                        <option value="">UCZEŃ...</option>
                                         {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.email})</option>)}
                                     </select>
                                     <div className="flex gap-2">

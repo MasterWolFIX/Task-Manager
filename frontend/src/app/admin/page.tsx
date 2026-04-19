@@ -80,7 +80,7 @@ export default function AdminDashboard() {
                 <nav className="flex-1 px-3 space-y-1">
                     <Link href="/admin" onClick={() => setSidebarOpen(false)} className="flex items-center px-4 py-2 bg-blue-600/10 text-blue-500 rounded-xl font-black uppercase text-[8px] tracking-widest border border-blue-600/20 shadow-md">Dashboard</Link>
                     <Link href="/admin/classes" onClick={() => setSidebarOpen(false)} className="flex items-center px-4 py-2 text-zinc-600 hover:text-white rounded-xl transition-all font-black uppercase text-[8px] tracking-widest">Klasy</Link>
-                    <Link href="/admin/settings" onClick={() => setSidebarOpen(false)} className="flex items-center px-4 py-2 text-zinc-600 hover:text-white rounded-xl transition-all font-black uppercase text-[8px] tracking-widest">Settings</Link>
+                    <Link href="/admin/settings" onClick={() => setSidebarOpen(false)} className="flex items-center px-4 py-2 text-zinc-600 hover:text-white rounded-xl transition-all font-black uppercase text-[8px] tracking-widest">Ustawienia</Link>
                 </nav>
 
                 {/* LOGOUT — widoczny tylko w sidebarze na stronie głównej admina */}
@@ -133,7 +133,7 @@ export default function AdminDashboard() {
                     {/* TASKS LIST */}
                     <div className="bg-[#0a0a0a] border border-white/5 rounded-[24px] overflow-hidden p-1.5 shadow-2xl">
                         {isLoading ? (
-                            <div className="p-20 text-center opacity-10 font-black uppercase text-[10px] animate-pulse">Syncing...</div>
+                            <div className="p-20 text-center opacity-10 font-black uppercase text-[10px] animate-pulse">Ładowanie...</div>
                         ) : tasks.length > 0 ? (
                             <div className="divide-y divide-white/5">
                                 {tasks.map((task) => (
@@ -172,7 +172,7 @@ export default function AdminDashboard() {
                                 ))}
                             </div>
                         ) : (
-                            <div className="py-20 text-center text-zinc-900 font-black uppercase text-[9px] tracking-widest opacity-20 italic">No Task Payload Detected.</div>
+                            <div className="py-20 text-center text-zinc-900 font-black uppercase text-[9px] tracking-widest opacity-20 italic">Brak zadań.</div>
                         )}
                     </div>
                 </div>
