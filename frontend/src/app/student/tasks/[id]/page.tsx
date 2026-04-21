@@ -242,8 +242,6 @@ export default function StudentDetails() {
                         </div>
                     )}
                 </div>
-
-                {/* PRAWA KOLUMNA: EDYTOR (Tylko jeśli dozwolone) */}
                 <div className="lg:col-span-8">
                     {(subType === 'code' || subType === 'both') ? (
                         <div className="flex flex-col bg-[#080808] border border-white/5 rounded-[24px] sm:rounded-[40px] overflow-hidden shadow-[0_60px_120px_rgba(0,0,0,0.9)] h-[460px] sm:h-[620px] lg:h-[820px] relative">
