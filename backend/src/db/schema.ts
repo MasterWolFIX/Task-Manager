@@ -6,7 +6,6 @@ import {
   timestamp,
   boolean,
   integer,
-  smallint,
   jsonb,
   primaryKey
 } from 'drizzle-orm/pg-core';
@@ -126,7 +125,7 @@ export const submissions = pgTable('submissions', {
   filePath: varchar('file_path', { length: 500 }),
   submittedAt: timestamp('submitted_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-  grade: smallint('grade'),
+  grade: varchar('grade', { length: 10 }),
   feedback: text('feedback'),
   gradedAt: timestamp('graded_at'),
   status: varchar('status', { length: 20 }).default('pending'), // 'pending' | 'graded' | 'rejected'

@@ -130,18 +130,18 @@ export default function AdminClasses() {
     if (!_hasHydrated) return null;
 
     return (
-        <div className="min-h-screen flex h-screen overflow-hidden bg-[#050505] text-[#e4e4e7] text-[9px]">
+        <div className="min-h-screen flex h-screen overflow-hidden bg-[#050505] text-[#e4e4e7] text-[13px]">
 
             <aside className="w-56 border-r border-white/5 bg-[#0a0a0a] flex flex-col shrink-0 overflow-hidden">
                 <div className="p-5 pb-3 flex items-center gap-2">
                     <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white text-sm italic uppercase">A</div>
-                    <h1 className="text-[11px] font-black uppercase tracking-tighter opacity-40">Console</h1>
+                    <h1 className="text-[12px] font-black uppercase tracking-tighter text-zinc-500">Console</h1>
                 </div>
                 <div className="h-px bg-white/5 mb-4"></div>
                 <nav className="flex-1 px-3 space-y-1">
-                    <Link href="/admin" className="flex items-center px-4 py-2 text-zinc-600 hover:text-white rounded-xl font-black uppercase text-[8px] tracking-widest transition-all">Dashboard</Link>
-                    <Link href="/admin/classes" className="flex items-center px-4 py-2 bg-blue-600/10 text-blue-500 rounded-xl font-black uppercase text-[8px] tracking-widest border border-blue-600/20 shadow-lg shadow-blue-900/10">Grupy</Link>
-                    <Link href="/admin/settings" className="flex items-center px-4 py-2 text-zinc-600 hover:text-white rounded-xl font-black uppercase text-[8px] tracking-widest transition-all">Ustawienia</Link>
+                    <Link href="/admin" className="flex items-center px-4 py-2.5 text-zinc-400 hover:text-white rounded-xl font-black uppercase text-[11px] tracking-widest transition-all">Dashboard</Link>
+                    <Link href="/admin/classes" className="flex items-center px-4 py-2.5 bg-blue-600/10 text-blue-400 rounded-xl font-black uppercase text-[11px] tracking-widest border border-blue-600/20 shadow-lg shadow-blue-900/10">Grupy</Link>
+                    <Link href="/admin/settings" className="flex items-center px-4 py-2.5 text-zinc-400 hover:text-white rounded-xl font-black uppercase text-[11px] tracking-widest transition-all">Ustawienia</Link>
                 </nav>
             </aside>
 
@@ -151,7 +151,7 @@ export default function AdminClasses() {
                         <h1 className="text-xl font-black text-white tracking-widest uppercase leading-none italic opacity-80">GRUPY</h1>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button onClick={() => router.push('/admin/tasks/new')} className="bg-white hover:bg-zinc-200 text-black px-5 py-1.5 rounded-lg font-black uppercase text-[9px] tracking-widest transition-all">+ NOWE</button>
+                        <button onClick={() => router.push('/admin/tasks/new')} className="bg-white hover:bg-zinc-200 text-black px-5 py-1.5 rounded-lg font-black uppercase text-[11px] tracking-widest transition-all">+ NOWE</button>
                     </div>
                 </header>
 
@@ -161,17 +161,17 @@ export default function AdminClasses() {
                         {/* LEFT: TOOLS COMPACT */}
                         <div className="col-span-12 lg:col-span-4 space-y-4">
                             <div className="bg-[#0a0a0a] border border-white/5 p-6 rounded-[24px] shadow-2xl space-y-4">
-                                <label className="text-[7px] font-black uppercase tracking-[0.4em] text-blue-500 italic px-1">INICJUJ GRUPĘ</label>
+                                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400 italic px-1">INICJUJ GRUPĘ</label>
                                 <form onSubmit={handleCreateClass} className="flex gap-2">
-                                    <input required placeholder="Nazwa..." value={newClassName} onChange={e => setNewClassName(e.target.value)} className="flex-1 bg-black border border-white/5 rounded-xl p-3 text-[9px] font-black text-white outline-none focus:border-blue-600/40" />
-                                    <button type="submit" className="bg-white hover:bg-zinc-200 text-black px-4 rounded-xl font-black text-[8px] uppercase tracking-widest transition-all">STWÓRZ</button>
+                                    <input required placeholder="Nazwa..." value={newClassName} onChange={e => setNewClassName(e.target.value)} className="flex-1 bg-black border border-white/5 rounded-xl p-3 text-[11px] font-black text-white outline-none focus:border-blue-600/40" />
+                                    <button type="submit" className="bg-white hover:bg-zinc-200 text-black px-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">STWÓRZ</button>
                                 </form>
                             </div>
 
                             <div className="bg-[#0a0a0a] border border-white/5 p-6 rounded-[24px] shadow-2xl space-y-4">
                                 {/* Nagłówek z zakładkami */}
                                 <div className="flex justify-between items-center px-1">
-                                    <label className="text-[7px] font-black uppercase tracking-[0.4em] text-emerald-500 italic">REKRUTACJA</label>
+                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-400 italic">REKRUTACJA</label>
                                     <div className="flex bg-black p-0.5 rounded-lg border border-white/5 gap-0.5">
                                         <button
                                             type="button"
@@ -201,17 +201,17 @@ export default function AdminClasses() {
                                 {addMode === 'single' ? (
                                     <form onSubmit={handleCreateSingle} className="space-y-3">
                                         <div className="space-y-1">
-                                            <label className="text-[7px] font-black uppercase tracking-widest text-zinc-700 ml-1">Imię i nazwisko</label>
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Imię i nazwisko</label>
                                             <input
                                                 required
                                                 placeholder="Jan Kowalski"
                                                 value={newStudentName}
                                                 onChange={e => setNewStudentName(e.target.value)}
-                                                className="w-full bg-black border border-white/5 rounded-xl p-3 text-[9px] font-black text-white outline-none focus:border-emerald-600/40 transition-colors"
+                                                className="w-full bg-black border border-white/5 rounded-xl p-3 text-[11px] font-black text-white outline-none focus:border-emerald-600/40 transition-colors"
                                             />
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-[7px] font-black uppercase tracking-widest text-zinc-700 ml-1">Adres e-mail</label>
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Adres e-mail</label>
                                             <input
                                                 required
                                                 type="email"
@@ -276,7 +276,7 @@ export default function AdminClasses() {
                             </div>
 
                             <div className="bg-[#0a0a0a] border border-white/5 p-6 rounded-[24px] shadow-2xl space-y-4 border-zinc-800/40">
-                                <label className="text-[7px] font-black uppercase tracking-[0.4em] text-orange-500 italic px-1">TRANSFER</label>
+                                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-orange-400 italic px-1">TRANSFER</label>
                                 <form onSubmit={handleTransfer} className="space-y-2">
                                     <select required value={transferUserId} onChange={e => setTransferUserId(e.target.value)} className="w-full bg-black border border-white/5 rounded-xl p-3 text-[9px] font-black text-zinc-400 outline-none appearance-none cursor-pointer uppercase">
                                         <option value="">UCZEŃ...</option>
@@ -308,8 +308,8 @@ export default function AdminClasses() {
                                         {c.classUsers?.map((cu: any) => (
                                             <div key={cu.user.id} className="flex justify-between items-center gap-2 group/item p-3 rounded-2xl hover:bg-white/[0.02] transition-all bg-black/20">
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="font-black text-[9px] text-zinc-300 tracking-tight leading-snug break-words">{cu.user.name}</p>
-                                                    <p className="text-[8px] text-zinc-700 font-medium truncate">{cu.user.email}</p>
+                                                    <p className="font-black text-[11px] text-zinc-200 tracking-tight leading-snug break-words">{cu.user.name}</p>
+                                                    <p className="text-[10px] text-zinc-500 font-medium truncate">{cu.user.email}</p>
                                                 </div>
                                                 <button onClick={() => removeStudentFromClass(c.id, cu.user.id)} className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-red-500/10 hover:text-red-500 hover:bg-red-500/10 transition-all font-black text-[10px]">✕</button>
                                             </div>

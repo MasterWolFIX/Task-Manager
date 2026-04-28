@@ -1,0 +1,1 @@
+ALTER TABLE "submissions" ALTER COLUMN "grade" SET DATA TYPE varchar(10);
