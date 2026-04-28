@@ -404,12 +404,12 @@ export default function AdminTaskDetails() {
                         {/* 3. GRADING TERMINAL COMPACT */}
                         <div className="h-28 bg-[#0a0a0a] border-t border-white/5 p-4 flex items-center justify-between px-10 shadow-[0_-30px_90px_rgba(0,0,0,0.8)] z-50">
                             <div className="flex items-center gap-6 flex-1">
-                                <div className="w-20">
+                                <div className="w-32">
                                     <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 mb-1 block text-center italic">OCENA</label>
                                     <input
                                         type="text"
-                                        placeholder="np. +5, -4, 4.5"
-                                        className="w-full bg-black border border-white/5 rounded-xl h-12 text-center text-blue-400 font-black text-xl outline-none focus:border-blue-600/30 transition-all font-mono shadow-2xl placeholder:text-zinc-700 placeholder:text-sm"
+                                        placeholder="+5 / -4 / 4.5"
+                                        className="w-full bg-black border border-white/5 rounded-xl h-12 text-center text-blue-400 font-black text-xl outline-none focus:border-blue-600/30 transition-all font-mono shadow-2xl placeholder:text-zinc-600 placeholder:text-[11px] placeholder:font-normal"
                                         value={grade}
                                         onChange={(e) => setGrade(e.target.value)}
                                     />

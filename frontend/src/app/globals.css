@@ -20,8 +20,7 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: var(--font-geist-sans), sans-serif;
-    /* Subtelny szum i gradient tła dla dodania głębi */
+    font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
     background-image: radial-gradient(circle at top center, rgba(30, 41, 59, 0.4) 0%, transparent 40%);
     background-attachment: fixed;
   }
